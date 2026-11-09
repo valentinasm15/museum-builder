@@ -15,12 +15,16 @@ export interface Persona {
 export interface Zone {
   id: string; nameEn: string; nameFi: string; hasScreen: boolean
   exhibitObjects: number; routeSegment: string; exhibits: string[]
+  x: number; y: number; w: number; h: number // grid tiles
 }
-export interface Segment { id: string; from: string; description: string; existing: boolean }
+export interface Rect { id: string; x: number; y: number; w: number; h: number }
+export type FeatureKind = 'display' | 'lift' | 'stairs' | 'exit' | 'wc' | 'feedback' | 'column' | 'car' | 'booth'
+export interface Feature extends Rect { kind: FeatureKind; nameEn: string; nameFi: string }
+export interface Segment { id: string; from: string; description: string; existing: boolean; x1: number; y1: number; x2: number; y2: number }
 export interface Existing { itemId: string; zoneId: string }
 export interface GameData {
   settings: Record<string, number>
-  items: Item[]; personas: Persona[]; zones: Zone[]; route: Segment[]
+  items: Item[]; personas: Persona[]; zones: Zone[]; route: Segment[]; floor: Rect[]; features: Feature[]
   existing: Existing[]; scoring: Record<string, number>
   texts: Record<string, { en: string; fi: string }>
 }
@@ -69,19 +73,28 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
     attrs: Object.fromEntries(attrCols.map((c) => [c, bool(r[c])])),
   }))
   const zones = sheet(wb, 'Zones', ['id', 'name_fi', 'name_en', 'has_screen', 'exhibit_objects', 'route_segment',
-    'exhibits (names, \';\'-separated)']).map((r): Zone => ({
+    'exhibits (names, \';\'-separated)', 'x', 'y', 'w', 'h']).map((r): Zone => ({
+    x: num(r.x, 'Zones', 'x'), y: num(r.y, 'Zones', 'y'), w: num(r.w, 'Zones', 'w'), h: num(r.h, 'Zones', 'h'),
     id: str(r.id), nameEn: str(r.name_en), nameFi: str(r.name_fi), hasScreen: bool(r.has_screen),
     exhibitObjects: num(r.exhibit_objects, 'Zones', 'exhibit_objects', 0), routeSegment: str(r.route_segment),
     exhibits: list(r["exhibits (names, ';'-separated)"], ';'),
   }))
-  const route = sheet(wb, 'Route', ['segment_id', 'from', 'description', 'existing']).map((r): Segment => ({
+  const route = sheet(wb, 'Route', ['segment_id', 'from', 'description', 'existing', 'x1', 'y1', 'x2', 'y2']).map((r): Segment => ({
+    x1: num(r.x1, 'Route', 'x1'), y1: num(r.y1, 'Route', 'y1'), x2: num(r.x2, 'Route', 'x2'), y2: num(r.y2, 'Route', 'y2'),
     id: str(r.segment_id), from: str(r.from), description: str(r.description), existing: bool(r.existing),
+  }))
+  const rect = (r: Row, sh: string) => ({
+    id: str(r.id), x: num(r.x, sh, 'x'), y: num(r.y, sh, 'y'), w: num(r.w, sh, 'w'), h: num(r.h, sh, 'h'),
+  })
+  const floor = sheet(wb, 'Floor', ['id', 'x', 'y', 'w', 'h']).map((r) => rect(r, 'Floor'))
+  const features = sheet(wb, 'Features', ['id', 'kind', 'x', 'y', 'w', 'h', 'name_en', 'name_fi']).map((r): Feature => ({
+    ...rect(r, 'Features'), kind: str(r.kind) as FeatureKind, nameEn: str(r.name_en), nameFi: str(r.name_fi),
   }))
   const existing = sheet(wb, 'Existing', ['item_id', 'zone_id']).map((r) => ({ itemId: str(r.item_id), zoneId: str(r.zone_id) }))
   const texts = Object.fromEntries(sheet(wb, 'Texts', ['key', 'en', 'fi']).map((r) => [str(r.key), { en: str(r.en), fi: str(r.fi) || str(r.en) }]))
   const data: GameData = {
     settings: keyValue(wb, 'Settings', 'setting'), scoring: keyValue(wb, 'Scoring', 'parameter'),
-    items, personas, zones, route, existing, texts,
+    items, personas, zones, route, floor, features, existing, texts,
   }
   validate(data, attrCols)
   return data
@@ -95,7 +108,8 @@ function validate(d: GameData, attrs: string[]) {
   for (const k of ['reach_full', 'reach_staff_guided', 'reach_plan_only', 'richness_per_extra_channel',
     'richness_cap', 'min_channels_full_value', 'single_channel_penalty', 'lighting_reach_factor'])
     if (!(k in d.scoring)) fail(`sheet "Scoring" is missing parameter "${k}"`)
-  if (!('budget_eur' in d.settings)) fail('sheet "Settings" is missing setting "budget_eur"')
+  for (const k of ['budget_eur', 'grid_w', 'grid_h', 'entrance_x', 'entrance_y'])
+    if (!(k in d.settings)) fail(`sheet "Settings" is missing setting "${k}"`)
   for (const i of d.items) {
     if (i.reachGrant && !['staff_guided', 'plan_only'].includes(i.reachGrant)) fail(`sheet "Items" column "reach_grant": "${i.reachGrant}" (item ${i.id}); use staff_guided or plan_only`)
     if (!['zone', 'venue', 'path'].includes(i.scope)) fail(`sheet "Items" column "scope": "${i.scope}" (item ${i.id})`)
@@ -104,6 +118,8 @@ function validate(d: GameData, attrs: string[]) {
       if (t !== 'route' && t !== 'has_screen' && !ids.has(t)) fail(`sheet "Items" column "requires": unknown id "${t}" (item ${i.id})`)
     for (const t of i.enhances) if (!ids.has(t)) fail(`sheet "Items" column "enhances": unknown id "${t}" (item ${i.id})`)
   }
+  for (const f of d.features)
+    if (!['display', 'lift', 'stairs', 'exit', 'wc', 'feedback', 'column', 'car', 'booth'].includes(f.kind)) fail(`sheet "Features" column "kind": "${f.kind}" (feature ${f.id})`)
   for (const z of d.zones) if (!segIds.has(z.routeSegment)) fail(`sheet "Zones" column "route_segment": unknown "${z.routeSegment}" (zone ${z.id})`)
   for (const s of d.route) if (s.from !== 'entrance' && !segIds.has(s.from)) fail(`sheet "Route" column "from": unknown "${s.from}"`)
   for (const e of d.existing) {

@@ -151,7 +151,7 @@ How the engine builds the benchmark plan (`engine/benchmark.ts`):
 
 ## 6. Item catalogue (v0, from team research + Terhi interview)
 
-> **Source of truth: `src/data/museum-builder-data.xlsx`** (sheets: Settings, Items, Personas, Zones, Route, Scoring). The table below is the original snapshot; its costs were rescaled in the Excel (÷5) for the €10k budget. If the two differ, the Excel wins.
+> **Source of truth: `src/data/museum-builder-data.xlsx`** (sheets: Settings, Items, Personas, Zones, Route, Scoring). The table below is the original snapshot; its costs match the Excel again (×5 vs. the first €10k version, restored 29.10 because the benchmark reached full access for ~€3.9k, which left no trade-off). If the two differ, the Excel wins.
 
 Costs are **indicative placeholders** and must be validated with LOGI. Set the budget so that roughly 30–50% of the full catalogue is affordable, which forces trade-offs. Default budget: **€10,000** (set in the Excel, `Settings` sheet), which currently covers ~36%. The workbook recomputes this when costs change.
 

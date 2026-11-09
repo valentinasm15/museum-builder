@@ -68,12 +68,17 @@ export function benchmark(data: GameData, budget: number) {
   return { placements, result: current }
 }
 
-/** Money efficiency = player's access ÷ benchmark access at the same spend. */
-export function moneyEfficiency(data: GameData, placements: Placement[]) {
+/** Money efficiency = player's access ÷ benchmark access for the FULL budget (primary); the benchmark at the player's own spend is secondary. */
+export function moneyEfficiency(data: GameData, placements: Placement[], budget = data.settings.budget_eur) {
   const player = score(data, placements)
-  const bench = benchmark(data, player.spent)
-  const efficiency = bench.result.overall > 0 ? player.overall / bench.result.overall : player.overall > 0 ? 1 : 0
-  return { player, benchmark: bench, efficiency }
+  const full = benchmark(data, budget)
+  const atSpend = benchmark(data, player.spent)
+  const ratio = (b: number) => (b > 0 ? player.overall / b : player.overall > 0 ? 1 : 0)
+  return {
+    player, benchmark: full, benchmarkAtSpend: atSpend,
+    efficiency: ratio(full.result.overall), efficiencyAtSpend: ratio(atSpend.result.overall),
+    unspent: Math.max(0, budget - player.spent),
+  }
 }
 
 /** Drop in access (and personas that lose access) if one placement is removed, everything else kept. */

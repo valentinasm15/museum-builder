@@ -25,9 +25,13 @@ describe('engine', () => {
   })
 
   it('smartphone audio excludes the persona without a smartphone', () => {
-    const r = score(data, [at('smartphone_audio', ''), at('audio_description')])
+    // every persona in the xlsx now has a smartphone, so switch it off for the braille reader
+    const d2: GameData = { ...data, personas: data.personas.map((p) => (p.id === P.br ? { ...p, attrs: { ...p.attrs, usesSmartphone: false } } : p)) }
+    const pl = [at('smartphone_audio', ''), at('audio_description')]
+    const r = score(d2, pl)
     expect(r.personas[P.nb]).toBeGreaterThan(base.personas[P.nb])
-    expect(r.personas[P.br]).toBe(base.personas[P.br])
+    expect(r.personas[P.br]).toBe(score(d2, []).personas[P.br])
+    expect(score(data, pl).personas[P.br]).toBeGreaterThan(base.personas[P.br])
   })
 
   it('a shared route segment is paid once', () => {
@@ -50,10 +54,11 @@ describe('engine', () => {
     const brailleAll = [at('braille_catalogue', ''), ...data.zones.flatMap((z) => [
       ...data.route.filter((s) => !s.existing).map((s) => at('tactile_route', s.id)),
       at('braille_label', z.id)])]
-    const { player, benchmark: b, efficiency } = moneyEfficiency(data, brailleAll)
+    const { player, benchmarkAtSpend: b, efficiency, efficiencyAtSpend } = moneyEfficiency(data, brailleAll)
     expect(b.result.spent).toBeLessThanOrEqual(player.spent)
     expect(b.result.overall).toBeGreaterThan(player.overall)
-    expect(efficiency).toBeLessThan(1)
+    expect(efficiencyAtSpend).toBeLessThan(1)
+    expect(efficiency).toBeLessThanOrEqual(efficiencyAtSpend)
     const full = benchmark(data, data.settings.budget_eur)
     expect(full.result.spent).toBeLessThanOrEqual(data.settings.budget_eur)
   })
@@ -74,11 +79,31 @@ describe('engine', () => {
     const reachOf = (d: GameData, pl: Placement[]) => score(d, pl).zones.lajittelu[P.nb].reach
     expect(reachOf(data, plan)).toBe(data.scoring.reach_staff_guided)
     expect(base.zones.lajittelu[P.nb].reach).toBe(data.scoring.reach_plan_only)
-    const ren = (id: string) => (id === 'guided_touch_tour' ? 'tour_renamed' : id)
+    const ren = (id: string) => (id === 'staff_training' ? 'training_renamed' : id)
     const d2: GameData = {
       ...data,
       items: data.items.map((i) => ({ ...i, id: ren(i.id), requires: i.requires.map((g) => g.map(ren)) })),
     }
     expect(reachOf(d2, plan.map((p) => ({ ...p, item: ren(p.item) })))).toBe(data.scoring.reach_staff_guided)
+  })
+
+  it('efficiency at €0 is low against the full-budget benchmark', () => {
+    const e = moneyEfficiency(data, [])
+    expect(e.benchmark.result.overall).toBeGreaterThan(0.5)
+    expect(e.efficiency).toBeLessThan(0.2)
+    expect(e.unspent).toBe(data.settings.budget_eur)
+  })
+
+  it('low vision with audio alone stays below 100%', () => {
+    const r = score(data, [at('smartphone_audio', ''), ...data.zones.map((z) => at('audio_description', z.id))])
+    expect(r.personas[P.lv]).toBeLessThan(1)
+  })
+
+  it('staff training alone gives staff-guided reach to every zone', () => {
+    const r = score(data, [at('staff_training', '')])
+    for (const z of data.zones)
+      if (!z.routeSegment || !new Plan(data, []).routeComplete(z))
+        expect(r.zones[z.id][P.nb].reach).toBeGreaterThanOrEqual(data.scoring.reach_staff_guided)
+    expect(r.zones.lajittelu[P.nb].reach).toBe(data.scoring.reach_staff_guided)
   })
 })

@@ -127,11 +127,12 @@ export function zoneScore(plan: Plan, zone: Zone, p: Persona, memo = new Map<str
   const s = plan.data.scoring
   const ch = channels(plan, zone, p, memo)
   const r = reach(plan, zone, p, memo)
-  const n = ch.size
-  const info = n ? Math.max(...ch.values()) : 0
+  const info = ch.size ? Math.max(...ch.values()) : 0
+  // 'visual' (plain looking at the exhibit) is a baseline, not a channel for richness or the single-channel penalty
+  const n = [...ch.keys()].filter((c) => c !== 'visual').length
   const richness = Math.min(s.richness_cap, s.richness_per_extra_channel * Math.max(0, n - 1))
   let value = Math.min(1, info + richness)
-  if (n > 0 && n < s.min_channels_full_value) value *= s.single_channel_penalty
+  if (info > 0 && n < s.min_channels_full_value) value *= s.single_channel_penalty
   return { reach: r, info, channels: [...ch.keys()], score: r * value }
 }
 
