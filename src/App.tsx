@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { t, useGame, type Lang } from './store'
-import Brief from './ui/Brief'
 import Budget from './ui/Budget'
 import Catalogue from './ui/Catalogue'
 import Intro from './ui/Intro'
@@ -29,7 +28,6 @@ export default function App() {
           <Logo />
           <span>{t(d, lang, 'app_title').split(' ').map((w, i) => <span key={i} className={i ? 'b2' : undefined}>{i ? ' ' : ''}{w}</span>)}</span>
         </h1>
-        <Brief d={d} />
         <Budget d={d} />
         <nav className="hud-right">
           <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>

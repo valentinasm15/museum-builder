@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { GameData } from '../data/load'
-import { t, useGame } from '../store'
+import { budget, money, t, useGame } from '../store'
 
 // Step 0 is the welcome; steps 1-4 point at a part of the screen. The highlight is decoration: every step is also plain text.
 const TARGETS = ['', '.toolkit', '.play > .scene', '.toolkit .tiles', 'header .budget']
@@ -54,6 +54,11 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
         <div aria-live="polite">
           <h2 id="intro-h">{title}</h2>
           <p>{step === 0 ? t(d, lang, 'intro_goal') : t(d, lang, `intro_${step}`)}</p>
+          {step === 0 && <>
+            <p><strong>{t(d, lang, 'challenge', { budget: money(lang, budget(d)) })}</strong></p>
+            <p>{t(d, lang, 'visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join(', ')}.</p>
+            <p className="note">{t(d, lang, 'model_disclaimer')}</p>
+          </>}
         </div>
         <div className="intro-nav">
           {step < last && <button type="button" className="link" onClick={() => ref.current?.close()}>{t(d, lang, 'intro_skip')}</button>}
