@@ -7,16 +7,30 @@ export type Lang = 'en' | 'fi'
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
+  visit: Visit; round: number; phase: 'planning'
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
   init: (data: GameData) => void
   fail: (message: string) => void
   setLang: (lang: Lang) => void
   setLevel: (id: string) => void
+  startRound: (n: number) => void
   select: (item: string | null) => void
   place: (item: string, at: string) => boolean
   remove: (p: Placement) => void
 }
+
+export interface Visit { personaId: string; situationId: string }
+/** One persona weighted by visitorShare (never `excludePersonaId` while others exist), one situation uniformly and independently. */
+export function drawVisit(d: GameData, excludePersonaId?: string): Visit {
+  const pool = d.personas.filter((p) => p.id !== excludePersonaId)
+  const ps = pool.length ? pool : d.personas
+  let r = Math.random() * ps.reduce((a, p) => a + p.visitorShare, 0)
+  const persona = ps.find((p) => (r -= p.visitorShare) < 0) ?? ps[ps.length - 1]
+  const situation = d.situations[Math.min(d.situations.length - 1, Math.floor(Math.random() * d.situations.length))]
+  return { personaId: persona.id, situationId: situation.id }
+}
+const noVisit: Visit = { personaId: '', situationId: '' }
 
 // ---- derived budget (Plan.cost() handles existing items and existing segments as free) ----
 export const budget = (d: GameData) => d.settings.budget_eur
@@ -82,17 +96,31 @@ export const useGame = create<State>((set, get) => {
     const i = d.items.find((x) => x.id === item)!
     set({ announcement: t(d, lang, key, { item: itemName(lang, i), target: targetName(d, lang, at), remaining: money(lang, remaining(d, placements)) }) })
   }
+  const drawn = (d: GameData, lang: Lang, v: Visit) => {
+    const p = d.personas.find((x) => x.id === v.personaId)!, sit = d.situations.find((x) => x.id === v.situationId)!
+    return `${t(d, lang, 'drawn_visitor', { persona: (lang === 'fi' && p.nameFi) || p.name })} ${t(d, lang, 'drawn_situation', { situation: (lang === 'fi' && sit.nameFi) || sit.name })}`
+  }
   return {
-    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null,
+    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null, visit: noVisit, round: 1, phase: 'planning',
     setFocus: (focus) => set({ focus }),
-    init: (base) => { const level = defaultLevel(base); set({ base, level, data: withLevel(base, level), error: null, placements: [], selected: null, announcement: '', focus: null }) },
+    init: (base) => {
+      const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
+      set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })
+    },
+    startRound: (n) => {
+      const { data, lang, visit: prev } = get()
+      if (!data) return
+      const visit = drawVisit(data, n > 1 ? prev.personaId : undefined)
+      set({ round: n, visit, phase: 'planning', placements: [], selected: null, focus: null, announcement: drawn(data, lang, visit) })
+    },
     setLevel: (id) => {
       const { base, lang, level } = get()
       const l = base?.levels.find((x) => x.id === id)
       if (!base || !l || id === level) return
       const data = withLevel(base, id)
-      set({ level: id, data, placements: [], selected: null, focus: null,
-        announcement: t(data, lang, 'level_announce', { level: levelName(lang, l), budget: money(lang, l.budgetEur) }) })
+      const visit = drawVisit(base)
+      set({ level: id, data, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning',
+        announcement: `${t(data, lang, 'level_announce', { level: levelName(lang, l), budget: money(lang, l.budgetEur) })} ${drawn(data, lang, visit)}` })
     },
     fail: (error) => set({ error }),
     setLang: (lang) => set({ lang }),

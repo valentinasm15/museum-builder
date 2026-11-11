@@ -6,7 +6,7 @@ import { budget, levelName, money, t, useGame } from '../store'
 const TARGETS = ['', '.toolkit', '.play > .scene', '.toolkit .tiles', 'header .budget']
 
 export default function Intro({ d, open, onClose }: { d: GameData; open: boolean; onClose: () => void }) {
-  const { lang, level, setLevel } = useGame()
+  const { lang, level, setLevel, visit } = useGame()
   const ref = useRef<HTMLDialogElement>(null)
   const go = useRef<HTMLButtonElement>(null)
   const [step, setStep] = useState(0)
@@ -46,6 +46,8 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
     setPos({ left: Math.max(8, Math.min(left, vw - w - 8)), top: Math.max(8, Math.min(top, vh - h - 8)) })
   }, [open, rect, lang])
 
+  const vp = d.personas.find((p) => p.id === visit.personaId), vs = d.situations.find((x) => x.id === visit.situationId)
+  const pn = vp && ((lang === 'fi' && vp.nameFi) || vp.name), sn = vs && ((lang === 'fi' && vs.nameFi) || vs.name)
   const title = step === 0 ? t(d, lang, 'intro_title') : t(d, lang, 'intro_step', { n: String(step), total: String(last) })
   return (
     <>
@@ -66,6 +68,7 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
               <p className="note">{t(d, lang, 'level_hint')}</p>
             </fieldset>
             <p><strong>{t(d, lang, 'challenge', { budget: money(lang, budget(d)) })}</strong></p>
+            {pn && sn && <p><strong>{t(d, lang, 'intro_visitor', { persona: pn, situation: sn })}</strong></p>}
             <p>{t(d, lang, 'visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join(', ')}.</p>
             <p className="note">{t(d, lang, 'model_disclaimer')}</p>
           </>}
