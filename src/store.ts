@@ -1,3 +1,4 @@
+import { play, type Cue } from './ui/sound'
 import { create } from 'zustand'
 import type { GameData, Item, Level } from './data/load'
 import { Plan, score, type Placement, type VisitContext } from './engine/score'
@@ -8,6 +9,7 @@ export type Phase = 'planning' | 'visiting' | 'debrief'
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
+  sound: boolean; setSound: (on: boolean) => void // click cues, off by default, remembered in the browser
   visit: Visit; round: number; phase: Phase
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
@@ -103,6 +105,10 @@ const withLevel = (base: GameData, id: string): GameData => ({
   ...base, settings: { ...base.settings, budget_eur: base.levels.find((l) => l.id === id)!.budgetEur },
 })
 
+const SOUND_KEY = 'mb-sound'
+const soundSaved = () => { try { return localStorage.getItem(SOUND_KEY) === '1' } catch { return false } }
+export const cue = (k: Cue) => { if (useGame.getState().sound) play(k) }
+
 export const useGame = create<State>((set, get) => {
   const say = (key: string, item: string, at: string) => {
     const { data: d, lang, placements } = get()
@@ -115,7 +121,7 @@ export const useGame = create<State>((set, get) => {
     return `${t(d, lang, 'drawn_visitor')}: ${n.persona}. ${t(d, lang, 'drawn_situation')}: ${n.situation}.`
   }
   return {
-    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null, visit: noVisit, round: 1, phase: 'planning',
+    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', sound: soundSaved(), focus: null, visit: noVisit, round: 1, phase: 'planning',
     setFocus: (focus) => set({ focus }),
     init: (base) => {
       const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
@@ -142,6 +148,10 @@ export const useGame = create<State>((set, get) => {
     },
     fail: (error) => set({ error }),
     setLang: (lang) => set({ lang }),
+    setSound: (sound) => {
+      try { localStorage.setItem(SOUND_KEY, sound ? '1' : '0') } catch { /* ignore */ }
+      set({ sound }); if (sound) play('placed')
+    },
     select: (selected) => {
       set({ selected })
       const d = get().data
@@ -151,14 +161,14 @@ export const useGame = create<State>((set, get) => {
     },
     place: (item, at) => {
       const { data: d, placements } = get()
-      if (!d || !canPlace(d, placements, item, at)) return false
+      if (!d || !canPlace(d, placements, item, at)) { cue('refused'); return false }
       set({ placements: [...placements, { item, at }], selected: null })
-      say('announce_placed', item, at)
+      cue('placed'); say('announce_placed', item, at)
       return true
     },
     remove: (p) => {
       set({ placements: get().placements.filter((x) => !(x.item === p.item && x.at === p.at)) })
-      say('announce_removed', p.item, p.at)
+      cue('removed'); say('announce_removed', p.item, p.at)
     },
   }
 })
