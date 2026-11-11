@@ -1,17 +1,18 @@
 import { create } from 'zustand'
-import type { GameData, Item } from './data/load'
+import type { GameData, Item, Level } from './data/load'
 import { Plan, score, type Placement } from './engine/score'
 
 export type Lang = 'en' | 'fi'
 
 interface State {
-  data: GameData | null; error: string | null; lang: Lang
+  data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
   init: (data: GameData) => void
   fail: (message: string) => void
   setLang: (lang: Lang) => void
+  setLevel: (id: string) => void
   select: (item: string | null) => void
   place: (item: string, at: string) => boolean
   remove: (p: Placement) => void
@@ -67,6 +68,13 @@ export function targetName(d: GameData, lang: Lang, at: string) {
   return s ? `${t(d, lang, 'route_segment')} ${s.id}: ${s.description}` : at
 }
 
+/** Level shown first: the one whose budget equals Settings.budget_eur, else the first row. */
+export const defaultLevel = (d: GameData) => (d.levels.find((l) => l.budgetEur === d.settings.budget_eur) ?? d.levels[0]).id
+export const levelName = (lang: Lang, l: Level) => (lang === 'fi' && l.nameFi) || l.name
+const withLevel = (base: GameData, id: string): GameData => ({
+  ...base, settings: { ...base.settings, budget_eur: base.levels.find((l) => l.id === id)!.budgetEur },
+})
+
 export const useGame = create<State>((set, get) => {
   const say = (key: string, item: string, at: string) => {
     const { data: d, lang, placements } = get()
@@ -75,9 +83,17 @@ export const useGame = create<State>((set, get) => {
     set({ announcement: t(d, lang, key, { item: itemName(lang, i), target: targetName(d, lang, at), remaining: money(lang, remaining(d, placements)) }) })
   }
   return {
-    data: null, error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null,
+    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null,
     setFocus: (focus) => set({ focus }),
-    init: (data) => set({ data, error: null, placements: [], selected: null, announcement: '', focus: null }),
+    init: (base) => { const level = defaultLevel(base); set({ base, level, data: withLevel(base, level), error: null, placements: [], selected: null, announcement: '', focus: null }) },
+    setLevel: (id) => {
+      const { base, lang, level } = get()
+      const l = base?.levels.find((x) => x.id === id)
+      if (!base || !l || id === level) return
+      const data = withLevel(base, id)
+      set({ level: id, data, placements: [], selected: null, focus: null,
+        announcement: t(data, lang, 'level_announce', { level: levelName(lang, l), budget: money(lang, l.budgetEur) }) })
+    },
     fail: (error) => set({ error }),
     setLang: (lang) => set({ lang }),
     select: (selected) => {

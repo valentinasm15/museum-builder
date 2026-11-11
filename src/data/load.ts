@@ -22,8 +22,9 @@ export type FeatureKind = 'display' | 'lift' | 'stairs' | 'exit' | 'wc' | 'feedb
 export interface Feature extends Rect { kind: FeatureKind; nameEn: string; nameFi: string }
 export interface Segment { id: string; from: string; description: string; existing: boolean; x1: number; y1: number; x2: number; y2: number }
 export interface Existing { itemId: string; zoneId: string }
+export interface Level { id: string; name: string; nameFi: string; budgetEur: number }
 export interface GameData {
-  settings: Record<string, number>
+  settings: Record<string, number>; levels: Level[]
   items: Item[]; personas: Persona[]; zones: Zone[]; route: Segment[]; floor: Rect[]; features: Feature[]
   existing: Existing[]; scoring: Record<string, number>
   texts: Record<string, { en: string; fi: string }>
@@ -92,8 +93,11 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
   }))
   const existing = sheet(wb, 'Existing', ['item_id', 'zone_id']).map((r) => ({ itemId: str(r.item_id), zoneId: str(r.zone_id) }))
   const texts = Object.fromEntries(sheet(wb, 'Texts', ['key', 'en', 'fi']).map((r) => [str(r.key), { en: str(r.en), fi: str(r.fi) || str(r.en) }]))
+  const levels = sheet(wb, 'Levels', ['id', 'name_en', 'name_fi', 'budget_eur']).map((r): Level => ({
+    id: str(r.id), name: str(r.name_en), nameFi: str(r.name_fi), budgetEur: num(r.budget_eur, 'Levels', 'budget_eur'),
+  }))
   const data: GameData = {
-    settings: keyValue(wb, 'Settings', 'setting'), scoring: keyValue(wb, 'Scoring', 'parameter'),
+    levels, settings: keyValue(wb, 'Settings', 'setting'), scoring: keyValue(wb, 'Scoring', 'parameter'),
     items, personas, zones, route, floor, features, existing, texts,
   }
   validate(data, attrCols)
@@ -110,6 +114,7 @@ function validate(d: GameData, attrs: string[]) {
     if (!(k in d.scoring)) fail(`sheet "Scoring" is missing parameter "${k}"`)
   for (const k of ['budget_eur', 'grid_w', 'grid_h', 'entrance_x', 'entrance_y'])
     if (!(k in d.settings)) fail(`sheet "Settings" is missing setting "${k}"`)
+  if (!d.levels.length) fail('sheet "Levels" has no rows')
   for (const i of d.items) {
     if (i.reachGrant && !['staff_guided', 'plan_only'].includes(i.reachGrant)) fail(`sheet "Items" column "reach_grant": "${i.reachGrant}" (item ${i.id}); use staff_guided or plan_only`)
     if (!['zone', 'venue', 'path'].includes(i.scope)) fail(`sheet "Items" column "scope": "${i.scope}" (item ${i.id})`)
