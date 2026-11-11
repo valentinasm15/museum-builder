@@ -14,7 +14,7 @@ export default function Budget({ d }: { d: GameData }) {
         <div><dt>{t(d, lang, 'spent')}</dt><dd>{money(lang, s)}</dd></div>
         <div className="left"><dt>{t(d, lang, 'remaining')}</dt><dd>{money(lang, remaining(d, placements))}</dd></div>
       </dl>
-      <p className="note">{t(d, lang, 'round')} {round}/{d.settings.rounds ?? 1} · {t(d, lang, 'drawn_visitor')}: {vn.persona} · {t(d, lang, 'drawn_situation')}: {vn.situation}</p>
+      <p className="visitor" title={`${vn.persona} · ${vn.situation}`}>{t(d, lang, 'round')} {round}/{d.settings.rounds ?? 1} · {vn.persona} · {vn.situation}</p>
       <progress max={b} value={s} aria-label={t(d, lang, 'spent')}>{money(lang, s)}</progress>
       <p role="status" aria-live="polite" className="announce">{announcement}</p>
     </section>

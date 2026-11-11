@@ -32,7 +32,7 @@ export default function App() {
         </h1>
         <Budget d={d} />
         <nav className="hud-right">
-          <button type="button" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
+          <button type="button" className="submit" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
           <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>
           <a href="#room-h">{t(d, lang, 'room_view')}</a>
           <div role="group" aria-label={t(d, lang, 'language')} className="lang">
