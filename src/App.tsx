@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { t, useGame, type Lang } from './store'
 import Budget from './ui/Budget'
+import Debrief from './ui/Debrief'
 import Catalogue from './ui/Catalogue'
 import Intro from './ui/Intro'
 import Logo from './ui/Logo'
@@ -43,6 +44,7 @@ export default function App() {
       </header>
       <Intro d={d} open={intro} onClose={() => setIntro(false)} />
       {phase === 'visiting' && <Visit d={d} />}
+      {phase === 'debrief' && <Debrief d={d} />}
       <main id="main" tabIndex={-1}>
         <div className="play">
           <Suspense fallback={<p>{t(d, lang, 'loading')}</p>}><Scene d={d} /></Suspense>

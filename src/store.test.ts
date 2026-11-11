@@ -86,3 +86,14 @@ it('openMuseum / closeVisit switch phase', () => {
   s().openMuseum(); expect(s().phase).toBe('visiting')
   s().closeVisit(); expect(s().phase).toBe('planning')
 })
+
+it('round 2 keeps the plan and budget, redraws without the round-1 persona; debrief phase', () => {
+  s().place('lighting', data.zones[0].id)
+  const p1 = s().visit.personaId, b = budget(s().data!)
+  s().openDebrief(); expect(s().phase).toBe('debrief')
+  s().startRound(2)
+  expect(s().phase).toBe('planning'); expect(s().round).toBe(2)
+  expect(s().placements).toHaveLength(1); expect(budget(s().data!)).toBe(b)
+  expect(s().visit.personaId).not.toBe(p1)
+  expect(s().announcement).toContain(s().visit.personaId ? data.personas.find((p) => p.id === s().visit.personaId)!.name : '')
+})

@@ -5,7 +5,7 @@ import { t, useGame, visitCtx } from '../store'
 
 // Plain text step list: no animation, so prefers-reduced-motion needs no special case.
 export default function Visit({ d }: { d: GameData }) {
-  const { lang, placements, visit: v, closeVisit } = useGame()
+  const { lang, placements, visit: v, closeVisit, openDebrief } = useGame()
   const ref = useRef<HTMLDialogElement>(null)
   const next = useRef<HTMLButtonElement>(null)
   const [pid, setPid] = useState(v.personaId)
@@ -41,6 +41,7 @@ export default function Visit({ d }: { d: GameData }) {
         <button type="button" onClick={() => go(at - 1)} disabled={at === 0}>{t(d, lang, 'walk_prev')}</button>
         <button type="button" onClick={() => go(at + 1)} disabled={at === last} ref={next}>{t(d, lang, 'walk_next')}</button>
         <button type="button" onClick={() => ref.current?.close()}>{close}</button>
+        {unlocked && <button type="button" onClick={openDebrief}>{t(d, lang, 'debrief')}</button>}
       </div>
     </dialog>
   )

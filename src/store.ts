@@ -3,11 +3,12 @@ import type { GameData, Item, Level } from './data/load'
 import { Plan, score, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
+export type Phase = 'planning' | 'visiting' | 'debrief'
 
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
-  visit: Visit; round: number; phase: 'planning' | 'visiting'
+  visit: Visit; round: number; phase: Phase
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
   init: (data: GameData) => void
@@ -16,6 +17,7 @@ interface State {
   setLevel: (id: string) => void
   startRound: (n: number) => void
   openMuseum: () => void
+  openDebrief: () => void
   closeVisit: () => void
   select: (item: string | null) => void
   place: (item: string, at: string) => boolean
@@ -36,6 +38,11 @@ export function drawVisit(d: GameData, excludePersonaId?: string): Visit {
 export function visitCtx(d: GameData, v: Visit): VisitContext {
   const x = d.situations.find((s) => s.id === v.situationId)
   return x ? { hasMuseumDevice: x.hasMuseumDevice, phoneWorks: x.phoneWorks, staffAvailable: x.staffAvailable } : {}
+}
+/** Localised names of the drawn persona and situation. */
+export function visitNames(d: GameData, lang: Lang, v: Visit) {
+  const p = d.personas.find((x) => x.id === v.personaId), s = d.situations.find((x) => x.id === v.situationId)
+  return { persona: (p && ((lang === 'fi' && p.nameFi) || p.name)) || '', situation: (s && ((lang === 'fi' && s.nameFi) || s.name)) || '' }
 }
 const noVisit: Visit = { personaId: '', situationId: '' }
 
@@ -104,8 +111,8 @@ export const useGame = create<State>((set, get) => {
     set({ announcement: t(d, lang, key, { item: itemName(lang, i), target: targetName(d, lang, at), remaining: money(lang, remaining(d, placements)) }) })
   }
   const drawn = (d: GameData, lang: Lang, v: Visit) => {
-    const p = d.personas.find((x) => x.id === v.personaId)!, sit = d.situations.find((x) => x.id === v.situationId)!
-    return `${t(d, lang, 'drawn_visitor', { persona: (lang === 'fi' && p.nameFi) || p.name })} ${t(d, lang, 'drawn_situation', { situation: (lang === 'fi' && sit.nameFi) || sit.name })}`
+    const n = visitNames(d, lang, v)
+    return `${t(d, lang, 'drawn_visitor')}: ${n.persona}. ${t(d, lang, 'drawn_situation')}: ${n.situation}.`
   }
   return {
     data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null, visit: noVisit, round: 1, phase: 'planning',
@@ -115,12 +122,14 @@ export const useGame = create<State>((set, get) => {
       set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })
     },
     openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null }) },
+    openDebrief: () => set({ phase: 'debrief' }),
     closeVisit: () => set({ phase: 'planning' }),
     startRound: (n) => {
       const { data, lang, visit: prev } = get()
       if (!data) return
       const visit = drawVisit(data, n > 1 ? prev.personaId : undefined)
-      set({ round: n, visit, phase: 'planning', placements: [], selected: null, focus: null, announcement: drawn(data, lang, visit) })
+      // Same budget and plan: the player may revise it for the new visitor.
+      set({ round: n, visit, phase: 'planning', selected: null, focus: null, announcement: `${t(data, lang, 'round')} ${n}. ${drawn(data, lang, visit)}` })
     },
     setLevel: (id) => {
       const { base, lang, level } = get()
