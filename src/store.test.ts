@@ -81,3 +81,8 @@ it('round 2 excludes the round-1 persona; all personas still scored', () => {
   for (let i = 0; i < 100; i++) { s().startRound(1); const p1 = s().visit.personaId; s().startRound(2); expect(s().visit.personaId).not.toBe(p1) }
   expect(t(data, 'fi', 'intro_visitor', { persona: 'a', situation: 'b' })).not.toMatch(/^\[/)
 })
+
+it('openMuseum / closeVisit switch phase', () => {
+  s().openMuseum(); expect(s().phase).toBe('visiting')
+  s().closeVisit(); expect(s().phase).toBe('planning')
+})

@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import type { GameData, Item, Level } from './data/load'
-import { Plan, score, type Placement } from './engine/score'
+import { Plan, score, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
 
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
-  visit: Visit; round: number; phase: 'planning'
+  visit: Visit; round: number; phase: 'planning' | 'visiting'
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
   init: (data: GameData) => void
@@ -15,6 +15,8 @@ interface State {
   setLang: (lang: Lang) => void
   setLevel: (id: string) => void
   startRound: (n: number) => void
+  openMuseum: () => void
+  closeVisit: () => void
   select: (item: string | null) => void
   place: (item: string, at: string) => boolean
   remove: (p: Placement) => void
@@ -29,6 +31,11 @@ export function drawVisit(d: GameData, excludePersonaId?: string): Visit {
   const persona = ps.find((p) => (r -= p.visitorShare) < 0) ?? ps[ps.length - 1]
   const situation = d.situations[Math.min(d.situations.length - 1, Math.floor(Math.random() * d.situations.length))]
   return { personaId: persona.id, situationId: situation.id }
+}
+/** Today's conditions (Situations sheet) for a drawn visit, as score() ctx. */
+export function visitCtx(d: GameData, v: Visit): VisitContext {
+  const x = d.situations.find((s) => s.id === v.situationId)
+  return x ? { hasMuseumDevice: x.hasMuseumDevice, phoneWorks: x.phoneWorks, staffAvailable: x.staffAvailable } : {}
 }
 const noVisit: Visit = { personaId: '', situationId: '' }
 
@@ -107,6 +114,8 @@ export const useGame = create<State>((set, get) => {
       const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
       set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })
     },
+    openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null }) },
+    closeVisit: () => set({ phase: 'planning' }),
     startRound: (n) => {
       const { data, lang, visit: prev } = get()
       if (!data) return
