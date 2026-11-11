@@ -11,7 +11,7 @@ import Visit from './ui/Visit'
 const Scene = lazy(() => import('./scene/Scene'))
 
 export default function App() {
-  const { data: d, error, lang, setLang, phase, openMuseum } = useGame()
+  const { data: d, error, lang, setLang, phase, openMuseum, sound, setSound } = useGame()
   const [intro, setIntro] = useState(true)
   useEffect(() => {
     document.documentElement.lang = lang
@@ -35,6 +35,7 @@ export default function App() {
           <button type="button" className="submit" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
           <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>
           <a href="#room-h">{t(d, lang, 'room_view')}</a>
+          <button type="button" aria-pressed={sound} onClick={() => setSound(!sound)}>{t(d, lang, 'sound')}</button>
           <div role="group" aria-label={t(d, lang, 'language')} className="lang">
             {(['en', 'fi'] as Lang[]).map((l) => (
               <button key={l} type="button" lang={l} aria-pressed={lang === l} onClick={() => setLang(l)}>{l.toUpperCase()}</button>

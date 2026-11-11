@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { GameData, Item, Scope } from '../data/load'
 import { channelKey, lookOf } from '../scene/look'
 import {
-  canPlace, helpsText, isExisting, isPlaced, itemName, money, needsText, remaining, t, targetName, useGame,
+  canPlace, cue, helpsText, isExisting, isPlaced, itemName, money, needsText, remaining, t, targetName, useGame,
 } from '../store'
 
 const TABS: { scope: Scope; key: string }[] = [
@@ -29,7 +29,7 @@ function Targets({ d, item }: { d: GameData; item: Item }) {
             {targetName(d, lang, at)} ({t(d, lang, 'already_placed')}: {t(d, lang, 'remove')})
           </button>
         ) : (
-          <button key={at} type="button" aria-disabled={!ok} onClick={() => ok && place(item.id, at) && focusId(`sel-${item.id}`)}>
+          <button key={at} type="button" aria-disabled={!ok} onClick={() => (ok ? place(item.id, at) && focusId(`sel-${item.id}`) : cue('refused'))}>
             {targetName(d, lang, at)}{!ok && <> ({t(d, lang, why)})</>}
           </button>
         )
@@ -77,7 +77,7 @@ export default function Catalogue({ d }: { d: GameData }) {
           return (
             <li key={i.id}>
               <button type="button" id={`sel-${i.id}`} aria-disabled={off} aria-pressed={venue ? mine : selected === i.id}
-                onClick={() => { if (off) return; if (mine) remove({ item: i.id, at: '' }); else if (venue) place(i.id, ''); else select(selected === i.id ? null : i.id) }}>
+                onClick={() => { if (off) return cue('refused'); if (mine) remove({ item: i.id, at: '' }); else if (venue) place(i.id, ''); else select(selected === i.id ? null : i.id) }}>
                 <span className="ico" aria-hidden="true">{lookOf(i).glyph}</span>
                 <span className="tname">{itemName(lang, i)}</span>
                 <span className="tcost">{money(lang, i.costEur)}{flag && <><br />{t(d, lang, flag)}</>}{mine && <><br />{t(d, lang, 'already_placed')}: {t(d, lang, 'remove')}</>}</span>
