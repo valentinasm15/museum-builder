@@ -1,3 +1,4 @@
+import { installClickCues } from './ui/sound'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { t, useGame, type Lang } from './store'
 import Budget from './ui/Budget'
@@ -17,6 +18,7 @@ export default function App() {
     document.documentElement.lang = lang
     if (d) document.title = t(d, lang, 'app_title')
   }, [d, lang])
+  useEffect(() => installClickCues(() => useGame.getState().sound), [])
 
   // Before the workbook loads there are no Texts yet, so these two screens show the loader's own message.
   if (error) return <main id="main"><h1>Museum Builder</h1><p role="alert" className="bad">{error}</p></main>
@@ -35,7 +37,7 @@ export default function App() {
           <button type="button" className="submit" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
           <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>
           <a href="#room-h">{t(d, lang, 'room_view')}</a>
-          <button type="button" aria-pressed={sound} onClick={() => setSound(!sound)}>{t(d, lang, 'sound')}</button>
+          <button type="button" onClick={() => setSound(!sound)}>{t(d, lang, sound ? 'sound_on' : 'sound_off')}</button>
           <div role="group" aria-label={t(d, lang, 'language')} className="lang">
             {(['en', 'fi'] as Lang[]).map((l) => (
               <button key={l} type="button" lang={l} aria-pressed={lang === l} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
