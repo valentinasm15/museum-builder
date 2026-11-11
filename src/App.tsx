@@ -14,6 +14,12 @@ const Scene = lazy(() => import('./scene/Scene'))
 export default function App() {
   const { data: d, error, lang, setLang, phase, openMuseum, sound, setSound } = useGame()
   const [intro, setIntro] = useState(true)
+  const [dark, setDark] = useState(() => (document.documentElement.dataset.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark')
+  const toggleDark = () => {
+    const next = dark ? 'light' : 'dark'
+    document.documentElement.dataset.theme = next; setDark(!dark)
+    try { localStorage.setItem('mb-theme', next) } catch { /* ignore */ }
+  }
   useEffect(() => {
     document.documentElement.lang = lang
     if (d) document.title = t(d, lang, 'app_title')
@@ -38,6 +44,7 @@ export default function App() {
           <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>
           <a href="#room-h">{t(d, lang, 'room_view')}</a>
           <button type="button" onClick={() => setSound(!sound)}>{t(d, lang, sound ? 'sound_on' : 'sound_off')}</button>
+          <button type="button" onClick={toggleDark}>{t(d, lang, dark ? 'dark_on' : 'dark_off')}</button>
           <div role="group" aria-label={t(d, lang, 'language')} className="lang">
             {(['en', 'fi'] as Lang[]).map((l) => (
               <button key={l} type="button" lang={l} aria-pressed={lang === l} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
