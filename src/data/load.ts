@@ -6,7 +6,7 @@ export type Scope = 'zone' | 'venue' | 'path'
 export interface Item {
   id: string; name: string; nameFi: string; scope: Scope; channel: string
   requires: Requires; enhances: string[]; reach: string; infoValue: number
-  costEur: number; enhanceFactor: number; reachGrant: string; status: string; source: string
+  costEur: number; enhanceFactor: number; reachGrant: string; kind: string; status: string; source: string
 }
 export interface Persona {
   id: string; name: string; nameFi: string; visitorShare: number
@@ -22,9 +22,10 @@ export type FeatureKind = 'display' | 'lift' | 'stairs' | 'exit' | 'wc' | 'feedb
 export interface Feature extends Rect { kind: FeatureKind; nameEn: string; nameFi: string }
 export interface Segment { id: string; from: string; description: string; existing: boolean; x1: number; y1: number; x2: number; y2: number }
 export interface Existing { itemId: string; zoneId: string }
+export interface Situation { id: string; name: string; nameFi: string; hasMuseumDevice: boolean; phoneWorks: boolean; staffAvailable: boolean }
 export interface Level { id: string; name: string; nameFi: string; budgetEur: number }
 export interface GameData {
-  settings: Record<string, number>; levels: Level[]
+  settings: Record<string, number>; levels: Level[]; situations: Situation[]
   items: Item[]; personas: Persona[]; zones: Zone[]; route: Segment[]; floor: Rect[]; features: Feature[]
   existing: Existing[]; scoring: Record<string, number>
   texts: Record<string, { en: string; fi: string }>
@@ -64,7 +65,7 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
     channel: str(r.channel), requires: parseRequires(r.requires), enhances: list(r.enhances, ';'),
     reach: str(r.reach) || 'all', infoValue: num(r.info_value, 'Items', 'info_value', 0),
     costEur: num(r.cost_eur, 'Items', 'cost_eur'), enhanceFactor: num(r.enhance_factor, 'Items', 'enhance_factor', 1),
-    reachGrant: str(r.reach_grant), status: str(r.status), source: str(r.source),
+    reachGrant: str(r.reach_grant), kind: str(r.kind), status: str(r.status), source: str(r.source),
   }))
   const pRows = sheet(wb, 'Personas', ['id', 'name', 'visitorShare', 'status', 'name_fi'])
   const attrCols = Object.keys(pRows[0] ?? {}).filter((k) => !PERSONA_META.includes(k))
@@ -96,8 +97,12 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
   const levels = sheet(wb, 'Levels', ['id', 'name_en', 'name_fi', 'budget_eur']).map((r): Level => ({
     id: str(r.id), name: str(r.name_en), nameFi: str(r.name_fi), budgetEur: num(r.budget_eur, 'Levels', 'budget_eur'),
   }))
+  const situations = sheet(wb, 'Situations', ['id', 'name', 'name_fi', 'hasMuseumDevice', 'phoneWorks', 'staffAvailable']).map((r): Situation => ({
+    id: str(r.id), name: str(r.name), nameFi: str(r.name_fi),
+    hasMuseumDevice: bool(r.hasMuseumDevice), phoneWorks: bool(r.phoneWorks), staffAvailable: bool(r.staffAvailable),
+  }))
   const data: GameData = {
-    levels, settings: keyValue(wb, 'Settings', 'setting'), scoring: keyValue(wb, 'Scoring', 'parameter'),
+    levels, situations, settings: keyValue(wb, 'Settings', 'setting'), scoring: keyValue(wb, 'Scoring', 'parameter'),
     items, personas, zones, route, floor, features, existing, texts,
   }
   validate(data, attrCols)
@@ -115,6 +120,7 @@ function validate(d: GameData, attrs: string[]) {
   for (const k of ['budget_eur', 'grid_w', 'grid_h', 'entrance_x', 'entrance_y'])
     if (!(k in d.settings)) fail(`sheet "Settings" is missing setting "${k}"`)
   if (!d.levels.length) fail('sheet "Levels" has no rows')
+  if (!d.situations.length) fail('sheet "Situations" has no rows')
   for (const i of d.items) {
     if (i.reachGrant && !['staff_guided', 'plan_only'].includes(i.reachGrant)) fail(`sheet "Items" column "reach_grant": "${i.reachGrant}" (item ${i.id}); use staff_guided or plan_only`)
     if (!['zone', 'venue', 'path'].includes(i.scope)) fail(`sheet "Items" column "scope": "${i.scope}" (item ${i.id})`)

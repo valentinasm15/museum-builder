@@ -12,13 +12,18 @@ export interface ScoreResult {
   spent: number
 }
 
+/** Today's conditions for one visit. Omitted fields (or no ctx) = normal day; scoring is unchanged. */
+export interface VisitContext { hasMuseumDevice?: boolean; phoneWorks?: boolean; staffAvailable?: boolean }
+// Items with a special role in the situation/attr filters (ids as in the Items sheet).
+const DEVICE = 'audio_guide_devices', STAFFED_TOUR = 'guided_touch_tour', LIGHTING = 'lighting', VIEW = 'exhibit_view'
+
 const key = (p: Placement) => `${p.item}@${p.at}`
 
 export class Plan {
   readonly set = new Set<string>()
   readonly placements: Placement[] = []
   readonly items: Map<string, Item>
-  constructor(readonly data: GameData, player: Placement[]) {
+  constructor(readonly data: GameData, player: Placement[], readonly ctx: VisitContext = {}) {
     this.items = new Map(data.items.map((i) => [i.id, i]))
     for (const e of data.existing) this.add({ item: e.itemId, at: e.zoneId }, true)
     for (const p of player) this.add(p, false)
@@ -64,6 +69,9 @@ export function usable(plan: Plan, itemId: string, at: string, p: Persona | null
   if (stack.has(k)) return false
   const item = plan.items.get(itemId)
   let ok = !!item && plan.has(itemId, at) && (p === null || item.reach === 'all' || p.attrs[item.reach] === true)
+  const c = plan.ctx // today's conditions apply to a persona's visit only, not to the persona-free requirement check
+  if (ok && p !== null && ((c.hasMuseumDevice === false && itemId === DEVICE) || (c.staffAvailable === false && itemId === STAFFED_TOUR) ||
+    (c.phoneWorks === false && item!.reach === 'usesSmartphone'))) ok = false
   if (ok) {
     stack.add(k)
     ok = item!.requires.every((g) => g.some((t) => tokenMet(plan, t, at, p, memo, stack)))
@@ -93,6 +101,7 @@ export function missingRequirements(plan: Plan, p: Placement): string[][] {
 
 /** Does a placed, usable item carry this reach_grant (Items sheet) for p? */
 function grants(plan: Plan, grant: string, p: Persona, memo: Map<string, boolean>): boolean {
+  if (grant === 'staff_guided' && plan.ctx.staffAvailable === false) return false
   return plan.placements.some((pl) => plan.items.get(pl.item)?.reachGrant === grant && usable(plan, pl.item, pl.at, p, memo))
 }
 
@@ -100,27 +109,35 @@ export function reach(plan: Plan, zone: Zone, p: Persona, memo = new Map<string,
   const s = plan.data.scoring
   let r = 0
   if (plan.routeComplete(zone)) r = s.reach_full
-  else if (grants(plan, 'staff_guided', p, memo)) r = s.reach_staff_guided
+  else if (!p.attrs.needsContinuousRoute && grants(plan, 'staff_guided', p, memo)) r = s.reach_staff_guided
   else if (grants(plan, 'plan_only', p, memo)) r = s.reach_plan_only
-  if (p.attrs.residualVision && plan.has('lighting', zone.id)) r = Math.min(1, r * s.lighting_reach_factor)
+  if (p.attrs.residualVision && !p.attrs.glareSensitive && plan.has(LIGHTING, zone.id)) r = Math.min(1, r * s.lighting_reach_factor)
   return r
 }
 
 /** Usable information channels at a zone for a persona: channel → best (enhanced) value. */
 export function channels(plan: Plan, zone: Zone, p: Persona, memo = new Map<string, boolean>()): Map<string, number> {
-  const out = new Map<string, number>()
   const here = (pl: Placement) => pl.at === zone.id || pl.at === ''
-  for (const pl of plan.placements) {
-    const item = plan.items.get(pl.item)!
-    if (!here(pl) || !item.channel || item.infoValue <= 0 || !usable(plan, pl.item, pl.at, p, memo)) continue
-    let v = item.infoValue
-    for (const e of plan.placements) {
-      const enh = plan.items.get(e.item)!
-      if (here(e) && enh.enhances.includes(item.id) && usable(plan, e.item, e.at, p, memo)) v *= enh.enhanceFactor
+  const glare = !!p.attrs.glareSensitive && plan.has(LIGHTING, zone.id) // lighting hurts instead of helps
+  const build = (skip: string) => {
+    const out = new Map<string, number>()
+    for (const pl of plan.placements) {
+      const item = plan.items.get(pl.item)!
+      if (!here(pl) || item.id === skip || !item.channel || item.infoValue <= 0 || !usable(plan, pl.item, pl.at, p, memo)) continue
+      let v = item.infoValue
+      for (const e of plan.placements) {
+        const enh = plan.items.get(e.item)!
+        if (here(e) && enh.enhances.includes(item.id) && !(glare && enh.id === LIGHTING) && usable(plan, e.item, e.at, p, memo)) v *= enh.enhanceFactor
+      }
+      v = Math.min(1, v)
+      if (glare && (item.channel === 'visual' || item.channel === 'visual_enhanced')) v /= plan.data.scoring.lighting_reach_factor
+      out.set(item.channel, Math.max(out.get(item.channel) ?? 0, v))
     }
-    out.set(item.channel, Math.max(out.get(item.channel) ?? 0, Math.min(1, v)))
+    return out
   }
-  return out
+  const out = build('')
+  // someone who needs magnification gets nothing from plain looking: drop exhibit_view unless large print works here
+  return p.attrs.needsMagnification && !out.has('visual_enhanced') ? build(VIEW) : out
 }
 
 export function zoneScore(plan: Plan, zone: Zone, p: Persona, memo = new Map<string, boolean>()): ZoneResult {
@@ -146,8 +163,8 @@ export function overall(data: GameData, personaScores: Record<string, number>): 
   return total ? data.personas.reduce((a, p) => a + p.visitorShare * (personaScores[p.id] ?? 0), 0) / total : 0
 }
 
-export function score(data: GameData, placements: Placement[]): ScoreResult {
-  const plan = new Plan(data, placements)
+export function score(data: GameData, placements: Placement[], ctx?: VisitContext): ScoreResult {
+  const plan = new Plan(data, placements, ctx)
   const zones: ScoreResult['zones'] = {}
   const personas: Record<string, number> = {}
   const leftOut = new Set<string>()
