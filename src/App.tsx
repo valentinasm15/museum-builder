@@ -1,15 +1,17 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { t, useGame, type Lang } from './store'
 import Budget from './ui/Budget'
+import Debrief from './ui/Debrief'
 import Catalogue from './ui/Catalogue'
 import Intro from './ui/Intro'
 import Logo from './ui/Logo'
 import Room from './ui/Room'
+import Visit from './ui/Visit'
 
 const Scene = lazy(() => import('./scene/Scene'))
 
 export default function App() {
-  const { data: d, error, lang, setLang } = useGame()
+  const { data: d, error, lang, setLang, phase, openMuseum } = useGame()
   const [intro, setIntro] = useState(true)
   useEffect(() => {
     document.documentElement.lang = lang
@@ -30,6 +32,7 @@ export default function App() {
         </h1>
         <Budget d={d} />
         <nav className="hud-right">
+          <button type="button" className="submit" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
           <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>
           <a href="#room-h">{t(d, lang, 'room_view')}</a>
           <div role="group" aria-label={t(d, lang, 'language')} className="lang">
@@ -40,6 +43,8 @@ export default function App() {
         </nav>
       </header>
       <Intro d={d} open={intro} onClose={() => setIntro(false)} />
+      {phase === 'visiting' && <Visit d={d} />}
+      {phase === 'debrief' && <Debrief d={d} />}
       <main id="main" tabIndex={-1}>
         <div className="play">
           <Suspense fallback={<p>{t(d, lang, 'loading')}</p>}><Scene d={d} /></Suspense>

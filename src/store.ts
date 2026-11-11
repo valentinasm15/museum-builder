@@ -1,22 +1,50 @@
 import { create } from 'zustand'
 import type { GameData, Item, Level } from './data/load'
-import { Plan, score, type Placement } from './engine/score'
+import { Plan, score, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
+export type Phase = 'planning' | 'visiting' | 'debrief'
 
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
+  visit: Visit; round: number; phase: Phase
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
   init: (data: GameData) => void
   fail: (message: string) => void
   setLang: (lang: Lang) => void
   setLevel: (id: string) => void
+  startRound: (n: number) => void
+  openMuseum: () => void
+  openDebrief: () => void
+  closeVisit: () => void
   select: (item: string | null) => void
   place: (item: string, at: string) => boolean
   remove: (p: Placement) => void
 }
+
+export interface Visit { personaId: string; situationId: string }
+/** One persona weighted by visitorShare (never `excludePersonaId` while others exist), one situation uniformly and independently. */
+export function drawVisit(d: GameData, excludePersonaId?: string): Visit {
+  const pool = d.personas.filter((p) => p.id !== excludePersonaId)
+  const ps = pool.length ? pool : d.personas
+  let r = Math.random() * ps.reduce((a, p) => a + p.visitorShare, 0)
+  const persona = ps.find((p) => (r -= p.visitorShare) < 0) ?? ps[ps.length - 1]
+  const situation = d.situations[Math.min(d.situations.length - 1, Math.floor(Math.random() * d.situations.length))]
+  return { personaId: persona.id, situationId: situation.id }
+}
+/** Today's conditions (Situations sheet) for a drawn visit, as score() ctx. */
+export function visitCtx(d: GameData, v: Visit): VisitContext {
+  const x = d.situations.find((s) => s.id === v.situationId)
+  return x ? { hasMuseumDevice: x.hasMuseumDevice, phoneWorks: x.phoneWorks, staffAvailable: x.staffAvailable } : {}
+}
+/** Localised names of the drawn persona and situation. */
+export function visitNames(d: GameData, lang: Lang, v: Visit) {
+  const p = d.personas.find((x) => x.id === v.personaId), s = d.situations.find((x) => x.id === v.situationId)
+  return { persona: (p && ((lang === 'fi' && p.nameFi) || p.name)) || '', situation: (s && ((lang === 'fi' && s.nameFi) || s.name)) || '' }
+}
+const noVisit: Visit = { personaId: '', situationId: '' }
 
 // ---- derived budget (Plan.cost() handles existing items and existing segments as free) ----
 export const budget = (d: GameData) => d.settings.budget_eur
@@ -82,17 +110,35 @@ export const useGame = create<State>((set, get) => {
     const i = d.items.find((x) => x.id === item)!
     set({ announcement: t(d, lang, key, { item: itemName(lang, i), target: targetName(d, lang, at), remaining: money(lang, remaining(d, placements)) }) })
   }
+  const drawn = (d: GameData, lang: Lang, v: Visit) => {
+    const n = visitNames(d, lang, v)
+    return `${t(d, lang, 'drawn_visitor')}: ${n.persona}. ${t(d, lang, 'drawn_situation')}: ${n.situation}.`
+  }
   return {
-    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null,
+    data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', focus: null, visit: noVisit, round: 1, phase: 'planning',
     setFocus: (focus) => set({ focus }),
-    init: (base) => { const level = defaultLevel(base); set({ base, level, data: withLevel(base, level), error: null, placements: [], selected: null, announcement: '', focus: null }) },
+    init: (base) => {
+      const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
+      set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })
+    },
+    openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null }) },
+    openDebrief: () => set({ phase: 'debrief' }),
+    closeVisit: () => set({ phase: 'planning' }),
+    startRound: (n) => {
+      const { data, lang, visit: prev } = get()
+      if (!data) return
+      const visit = drawVisit(data, n > 1 ? prev.personaId : undefined)
+      // Same budget and plan: the player may revise it for the new visitor.
+      set({ round: n, visit, phase: 'planning', selected: null, focus: null, announcement: `${t(data, lang, 'round')} ${n}. ${drawn(data, lang, visit)}` })
+    },
     setLevel: (id) => {
       const { base, lang, level } = get()
       const l = base?.levels.find((x) => x.id === id)
       if (!base || !l || id === level) return
       const data = withLevel(base, id)
-      set({ level: id, data, placements: [], selected: null, focus: null,
-        announcement: t(data, lang, 'level_announce', { level: levelName(lang, l), budget: money(lang, l.budgetEur) }) })
+      const visit = drawVisit(base)
+      set({ level: id, data, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning',
+        announcement: `${t(data, lang, 'level_announce', { level: levelName(lang, l), budget: money(lang, l.budgetEur) })} ${drawn(data, lang, visit)}` })
     },
     fail: (error) => set({ error }),
     setLang: (lang) => set({ lang }),
