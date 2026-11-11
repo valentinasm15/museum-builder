@@ -17,7 +17,7 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (open && !el.open) { setStep(0); el.showModal(); go.current?.focus() }
+    if (open && !el.open) { setStep(0); el.showModal(); go.current?.focus({ preventScroll: true }); el.scrollTop = 0 }
     if (!open && el.open) el.close()
   }, [open])
 
@@ -69,7 +69,7 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
             </fieldset>
             <p><strong>{t(d, lang, 'challenge', { budget: money(lang, budget(d)) })}</strong></p>
             {pn && sn && <p><strong>{t(d, lang, 'intro_visitor', { persona: pn, situation: sn })}</strong></p>}
-            <p>{t(d, lang, 'visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join(', ')}.</p>
+            <p>{t(d, lang, 'visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join('; ')}.</p>
             <p className="note">{t(d, lang, 'model_disclaimer')}</p>
           </>}
         </div>
