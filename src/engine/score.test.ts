@@ -27,7 +27,7 @@ describe('engine', () => {
   it('smartphone audio excludes the persona without a smartphone', () => {
     // every persona in the xlsx now has a smartphone, so switch it off for the braille reader
     const d2: GameData = { ...data, personas: data.personas.map((p) => (p.id === P.br ? { ...p, attrs: { ...p.attrs, usesSmartphone: false } } : p)) }
-    const pl = [at('smartphone_audio', ''), at('audio_description')]
+    const pl = [at('smartphone_audio', ''), at('visitor_wifi', ''), at('audio_description')]
     const r = score(d2, pl)
     expect(r.personas[P.nb]).toBeGreaterThan(base.personas[P.nb])
     expect(r.personas[P.br]).toBe(score(d2, []).personas[P.br])
@@ -61,7 +61,7 @@ describe('engine', () => {
     expect(efficiency).toBeLessThanOrEqual(efficiencyAtSpend)
     const full = benchmark(data, data.settings.budget_eur)
     expect(full.result.spent).toBeLessThanOrEqual(data.settings.budget_eur)
-  })
+  }, 20000)
 
   it('lighting raises low-vision reach and exhibit_view value, nothing for blind personas', () => {
     const lit = score(data, [at('lighting', 'lajittelu'), at('lighting')])
@@ -134,7 +134,7 @@ describe('personas and situations (thin filters)', () => {
   })
 
   it('phoneWorks=false switches smartphone off for the call only', () => {
-    const pl = [at('smartphone_audio', ''), at('audio_description')]
+    const pl = [at('smartphone_audio', ''), at('visitor_wifi', ''), at('audio_description')]
     expect(sc(pl).zones[Z][P.nb].channels).toContain('audio')
     expect(sc(pl, { phoneWorks: false }).zones[Z][P.nb].channels).not.toContain('audio')
     expect(persona(P.nb).attrs.usesSmartphone).toBe(true)

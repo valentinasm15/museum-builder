@@ -13,7 +13,7 @@ const targetsFor = (d: GameData, i: Item) =>
 const focusId = (id: string) => setTimeout(() => document.getElementById(id)?.focus())
 
 function Targets({ d, item }: { d: GameData; item: Item }) {
-  const { lang, placements, place, select } = useGame()
+  const { lang, placements, place, remove, select } = useGame()
   const ref = useRef<HTMLFieldSetElement>(null)
   useEffect(() => { ref.current?.querySelector<HTMLButtonElement>('button:not([aria-disabled="true"])')?.focus() }, [])
   const cancel = () => { select(null); focusId(`sel-${item.id}`) }
@@ -21,9 +21,14 @@ function Targets({ d, item }: { d: GameData; item: Item }) {
     <fieldset ref={ref} className="targets" onKeyDown={(e) => e.key === 'Escape' && cancel()}>
       <legend>{t(d, lang, 'targets')}</legend>
       {targetsFor(d, item).map((at) => {
+        const mine = isPlaced(placements, item.id, at) // placed by the player: pressing it again removes it
         const ok = canPlace(d, placements, item.id, at)
-        const why = isExisting(d, item.id, at) ? 'existing' : isPlaced(placements, item.id, at) ? 'already_placed' : 'unaffordable'
-        return (
+        const why = isExisting(d, item.id, at) ? 'existing' : 'unaffordable'
+        return mine ? (
+          <button key={at} type="button" aria-pressed="true" onClick={() => remove({ item: item.id, at })}>
+            {targetName(d, lang, at)} ({t(d, lang, 'already_placed')}: {t(d, lang, 'remove')})
+          </button>
+        ) : (
           <button key={at} type="button" aria-disabled={!ok} onClick={() => ok && place(item.id, at) && focusId(`sel-${item.id}`)}>
             {targetName(d, lang, at)}{!ok && <> ({t(d, lang, why)})</>}
           </button>
@@ -50,7 +55,7 @@ function Detail({ d, item }: { d: GameData; item: Item }) {
 }
 
 export default function Catalogue({ d }: { d: GameData }) {
-  const { lang, placements, selected, select, place } = useGame()
+  const { lang, placements, selected, select, place, remove } = useGame()
   const [tab, setTab] = useState<Scope>('zone')
   const left = remaining(d, placements)
   const picked = d.items.find((i) => i.id === selected)
@@ -65,16 +70,17 @@ export default function Catalogue({ d }: { d: GameData }) {
       <ul className="tiles">
         {d.items.filter((i) => i.costEur > 0 && i.scope === tab).map((i) => {
           const venue = i.scope === 'venue'
-          const done = venue && (isPlaced(placements, i.id, '') || isExisting(d, i.id, ''))
-          const off = done || i.costEur > left
-          const flag = done ? (isExisting(d, i.id, '') ? 'existing' : 'already_placed') : off ? 'unaffordable' : ''
+          const mine = venue && isPlaced(placements, i.id, '') // venue item bought by the player: pressing it again removes it
+          const done = venue && isExisting(d, i.id, '')
+          const off = done || (!mine && i.costEur > left)
+          const flag = done ? 'existing' : off ? 'unaffordable' : ''
           return (
             <li key={i.id}>
-              <button type="button" id={`sel-${i.id}`} aria-disabled={off} aria-pressed={venue ? undefined : selected === i.id}
-                onClick={() => { if (off) return; if (venue) place(i.id, ''); else select(selected === i.id ? null : i.id) }}>
+              <button type="button" id={`sel-${i.id}`} aria-disabled={off} aria-pressed={venue ? mine : selected === i.id}
+                onClick={() => { if (off) return; if (mine) remove({ item: i.id, at: '' }); else if (venue) place(i.id, ''); else select(selected === i.id ? null : i.id) }}>
                 <span className="ico" aria-hidden="true">{lookOf(i).glyph}</span>
                 <span className="tname">{itemName(lang, i)}</span>
-                <span className="tcost">{money(lang, i.costEur)}{flag && <><br />{t(d, lang, flag)}</>}</span>
+                <span className="tcost">{money(lang, i.costEur)}{flag && <><br />{t(d, lang, flag)}</>}{mine && <><br />{t(d, lang, 'already_placed')}: {t(d, lang, 'remove')}</>}</span>
               </button>
             </li>
           )
