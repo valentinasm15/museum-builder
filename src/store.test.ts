@@ -29,3 +29,12 @@ it('store budget: place, remove, existing free, cannot exceed', () => {
   expect(tooDear.length).toBeGreaterThan(0)
   for (const i of tooDear) for (const at of targets) expect(s().place(i.id, at)).toBe(false)
 })
+
+it('levels: easier = bigger budget, switching resets the plan', () => {
+  const b = data.levels.map((l) => l.budgetEur)
+  expect(b).toEqual([...b].sort((x, y) => y - x))
+  s().place('lighting', data.zones[0].id)
+  s().setLevel('hard')
+  expect(s().placements).toEqual([])
+  expect(budget(s().data!)).toBe(data.levels.find((l) => l.id === 'hard')!.budgetEur)
+})
