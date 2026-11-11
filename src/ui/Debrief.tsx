@@ -40,11 +40,11 @@ export default function Debrief({ d }: { d: GameData }) {
       </section>
 
       <section aria-labelledby="deb-dims">
-        <h3 id="deb-dims">{t(d, lang, 'access_achieved')}</h3>
+        <h3 id="deb-dims">{local(lang, 'dims')}</h3>
         <dl>
           <dt>{t(d, lang, 'deb_reach')}</dt><dd>{b(x.dims.reach)}</dd>
           <dt>{t(d, lang, 'deb_info')}</dt><dd>{b(x.dims.info)}</dd>
-          <dt>{t(d, lang, 'deb_richness')}</dt><dd>{b(x.dims.richness)}</dd>
+          <dt>{t(d, lang, 'deb_richness')}</dt><dd>{b(x.dims.richness)}<br /><span className="note">{local(lang, 'richHint')}</span></dd>
           <dt>{t(d, lang, 'left_out')}</dt><dd>{x.leftOut.length ? x.leftOut.join('; ') : local(lang, 'nobody')}</dd>
         </dl>
         {x.inactiveTotal > 0 && <p><strong>{t(d, lang, 'inactive_items')}</strong>: {t(d, lang, 'deb_inactive_total', { amount: money(lang, x.inactiveTotal) })}</p>}
@@ -56,7 +56,7 @@ export default function Debrief({ d }: { d: GameData }) {
           <dl>
             <dt>{t(d, lang, 'money_efficiency')}</dt><dd>{b(eff.band)}</dd>
             <dt>{local(lang, 'full')}</dt><dd>{b(eff.fullBand)}</dd>
-            <dt>{t(d, lang, 'benchmark')}</dt><dd>{b(eff.atSpendBand)} ({eff.benchSpent} / {eff.spent})</dd>
+            <dt>{t(d, lang, 'benchmark')}</dt><dd>{b(eff.atSpendBand)} ({local(lang, 'bench')} {eff.benchSpent}; {local(lang, 'you')} {eff.spent})</dd>
           </dl>
         )}
         {eff && <p>{eff.unspent}</p>}

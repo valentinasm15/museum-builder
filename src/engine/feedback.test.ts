@@ -37,12 +37,12 @@ it('comfort / enabler items are listed apart with cost and stay out of the value
 })
 
 it('trade-offs cite real item costs in EN and FI', () => {
-  const ps = [{ item: 'lighting', at: d.zones[0].id }, { item: 'robot_guide', at: '' }, { item: 'staff_training', at: '' }, { item: 'audio_guide_devices', at: '' }]
+  const ps = [{ item: 'tactile_replica', at: d.zones[1].id }, { item: 'lighting', at: d.zones[0].id }, { item: 'robot_guide', at: '' }, { item: 'staff_training', at: '' }, { item: 'audio_guide_devices', at: '' }]
   for (const lang of ['en', 'fi'] as const) {
     const n = tradeoffs(d, lang, ps, v('unstaffed_hours'))
     expect(n.length).toBeGreaterThan(0); expect(n.length).toBeLessThanOrEqual(5)
     const all = n.join(' ')
-    for (const id of ['lighting', 'robot_guide', 'staff_training', 'audio_guide_devices']) expect(all).toContain(money(lang, cost(id)))
+    for (const id of ['lighting', 'robot_guide', 'staff_training', 'audio_guide_devices', 'tactile_replica']) expect(all).toContain(money(lang, cost(id)))
     expect(all).not.toMatch(/[{}]|NaN|undefined/)
   }
   expect(tradeoffs(d, 'en', [], v('with_audio_guide'))).toEqual([])

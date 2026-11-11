@@ -19,6 +19,10 @@ const LOCAL = {
   full: { en: 'Benchmark plan (full budget)', fi: 'Vertailusuunnitelma (koko budjetti)' },
   trade: { en: 'Trade-offs in your plan', fi: 'Suunnitelmasi valinnat' },
   none: { en: 'None', fi: 'Ei yhtään' },
+  dims: { en: 'Six dimensions', fi: 'Kuusi ulottuvuutta' },
+  richHint: { en: 'Share of zone visits with two or more non-visual ways to take in the exhibit.', fi: 'Osuus alueiden vierailuista, joissa näyttelyn voi kokea vähintään kahdella ei-visuaalisella tavalla.' },
+  bench: { en: 'benchmark', fi: 'vertailu' },
+  you: { en: 'you', fi: 'sinä' },
 }
 export const local = (lang: Lang, k: keyof typeof LOCAL) => LOCAL[k][lang]
 
@@ -61,9 +65,10 @@ export function tradeoffs(d: GameData, lang: Lang, placements: Placement[], v: V
       `${nm('braille_catalogue')} maksoi ${m(c('braille_catalogue'))} ja auttaa ${br}/${total} kävijätyyppiä; ${nm('audio_description')} maksaa ${m(c('audio_description'))} aluetta kohti eikä vaadi pistekirjoituksen lukutaitoa.`))
   }
   if (placed('tactile_replica')) {
-    const no = n((p) => !p.attrs.comfortableWithTouch)
-    out.push(tx(`${nm('tactile_replica')} cost ${m(c('tactile_replica'))}; ${no} of ${total} visitor types are not comfortable with touch and get nothing from it.`,
-      `${nm('tactile_replica')} maksoi ${m(c('tactile_replica'))}; ${no}/${total} kävijätyyppiä ei sovi koskettelu, eikä se hyödytä heitä.`))
+    const r = item('tactile_replica')!.reach // who the sheet says it is for; no hard-coded attribute
+    const ok = r === 'all' ? total : n((p) => !!p.attrs[r])
+    if (ok < total) out.push(tx(`${nm('tactile_replica')} cost ${m(c('tactile_replica'))} and works for only ${ok} of ${total} visitor types.`,
+      `${nm('tactile_replica')} maksoi ${m(c('tactile_replica'))} ja toimii vain ${ok}/${total} kävijätyypille.`))
   }
   if (placed('lighting')) {
     const glare = n((p) => !!p.attrs.glareSensitive)
