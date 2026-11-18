@@ -103,13 +103,14 @@
       .glyph { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; border-radius: .4rem; padding: 0 .3rem; font-size: .95rem; }
       .glyph.warn { background: #fff3cd; color: #7a0016; font-weight: 700; }
       .seg { color: var(--muted); margin-bottom: .25rem; }
-      .a11y { position: relative; } .a11y-panel { position: absolute; right: 0; top: calc(100% + .375rem); z-index: 20; display: grid; gap: .625rem; min-width: 16rem; padding: .75rem; background: var(--bg); color: var(--fg); border: 2px solid var(--fg); border-radius: .5rem; box-shadow: 0 4px 16px rgba(0,0,0,.3); white-space: normal; }
+      .a11y { position: relative; } .a11y-panel { position: absolute; right: 0; top: calc(100% + .375rem); z-index: 20; display: grid; gap: .625rem; min-width: 19rem; padding: .75rem; background: var(--bg); color: var(--fg); border: 2px solid var(--fg); border-radius: .5rem; box-shadow: 0 4px 16px rgba(0,0,0,.3); white-space: normal; }
       .hud .a11y-panel a { color: var(--accent); font-size: 1rem; } .hud .a11y-panel * { white-space: normal; } .a11y-panel input[type=range] { width: 100%; height: 1.5rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
       .a11y-ticks { display: flex; justify-content: space-between; margin-top: -.5rem; padding: 0 .5rem; } .a11y-ticks span { width: 2px; height: .5rem; background: var(--fg); }
       .hud button.icon { min-width: 2.25rem; padding: 0 .4rem; display: inline-flex; align-items: center; justify-content: center; } .hud .icon .q { font-weight: 800; font-size: 1.125rem; line-height: 1; }
+      .a11y-size { display: flex; align-items: center; gap: .375rem; flex-wrap: wrap; } .a11y-size span { margin-right: auto; font-weight: 600; } .a11y-check { display: flex; align-items: center; gap: .5rem; } .a11y-check input { width: 1.25rem; height: 1.25rem; accent-color: var(--accent); }
       .a11y-panel .lang { display: grid; gap: .5rem; }
       html[data-contrast] { filter: contrast(var(--contrast)); }
-      @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+      html[data-motion="reduce"] { scroll-behavior: auto; } html[data-motion="reduce"] * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
     </style>
   </head>
   <body>

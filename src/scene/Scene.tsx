@@ -9,7 +9,7 @@ import { wallRuns } from './footprint'
 import { ItemBlock, Platform, RouteStrip, Wall, world } from './Pieces'
 import Props from './Props'
 
-const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const reduced = () => document.documentElement.dataset.motion === 'reduce' // set by the Accessibility menu, which starts from the system setting
 
 function Rig({ rot, zoom }: { rot: number; zoom: number }) {
   const { camera, size } = useThree()
