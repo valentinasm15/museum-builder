@@ -6,7 +6,7 @@ import { Plan } from '../engine/score'
 import { inactiveMap, itemName, t, targetName, useGame } from '../store'
 import { P } from './look'
 import { wallRuns } from './footprint'
-import { ItemBlock, Platform, RouteStrip, Wall, world } from './Pieces'
+import { ItemBlock, Platform, RouteStrip, Wall, Walker, world } from './Pieces'
 import Props from './Props'
 
 const reduced = () => document.documentElement.dataset.motion === 'reduce' // set by the Accessibility menu, which starts from the system setting
@@ -34,6 +34,7 @@ function CanvasLabel({ text }: { text: string }) {
 
 function Room3D({ d, rot }: { d: GameData; rot: number }) {
   const { lang, placements, selected, focus, setFocus, place } = useGame()
+  const wv = useGame((s) => s.walkView)
   const W = d.settings.grid_w, H = d.settings.grid_h
   const plan = useMemo(() => new Plan(d, placements), [d, placements])
   const missing = useMemo(() => inactiveMap(d, placements), [d, placements])
@@ -99,10 +100,11 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
       ))}
       {d.zones.map((z, n) => (
         <Platform key={z.id} num={n + 1} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
-          label={targetName(d, lang, z.id)} hint={picked?.scope === 'zone' ? `${t(d, lang, 'place')} ${itemName(lang, picked)}` : undefined}>
+          mark={wv?.marks[z.id]} label={targetName(d, lang, z.id)} hint={picked?.scope === 'zone' ? `${t(d, lang, 'place')} ${itemName(lang, picked)}` : undefined}>
           {blocks(z.id, z.x, z.y, z.w, z.h, world(d, z.x + z.w / 2, z.y + z.h / 2))}
         </Platform>
       ))}
+      {wv && <Walker d={d} at={wv.at} barrier={wv.barrier} />}
       <Platform num="⌂" d={d} x={vx} y={vy} w={vw} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
         label={t(d, lang, 'whole_museum')}>
         {blocks('', vx, vy, vw, vh, [vcx, vcz])}

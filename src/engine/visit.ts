@@ -35,7 +35,7 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
     say(`walk_reach_${how}`, { zone: zn }, z.id)
     const r = zoneScore(plan, z, persona, memo)
     const chans = r.channels.filter((c) => d.texts[`ch_${c}`]).map((c) => t(d, lang, `ch_${c}`))
-    if (!chans.length) say('walk_no_info', { zone: zn, exhibits: z.exhibits.join(', ') || unnamed(zn, lang) }, z.id)
+    if (!chans.length) say('walk_no_info', { zone: zn, exhibits: cap(z.exhibits.join(', ') || unnamed(zn, lang)) }, z.id)
     else {
       say('walk_info', { zone: zn, channels: chans.join(', ') }, z.id)
       if (r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) say('walk_one_channel', { zone: zn }, z.id)
@@ -137,7 +137,7 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
           if (cost > 0 && gain > 1e-9 && (!best || gain / cost > best.ratio)) best = { add, cost, ratio: gain / cost }
         }
       fails.push({
-        text: t(d, lang, 'walk_no_info', { zone: zn, exhibits: z.exhibits.join(', ') || zn }),
+        text: t(d, lang, 'walk_no_info', { zone: zn, exhibits: cap(z.exhibits.join(', ') || unnamed(zn, lang)) }),
         fix: best ? { text: sx(lang, 'fixAdd', { what: [...new Set(best.add.map((p) => p.item))].map(nm).join(' + '), cost: money(lang, best.cost) }), cost: best.cost, items: best.add } : undefined,
       })
     }

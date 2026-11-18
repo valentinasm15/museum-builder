@@ -45,11 +45,11 @@ export default function Debrief({ d }: { d: GameData }) {
         ))}</ol>
         <p className="note">{L('roomsLegend')}</p>
         {x.focal.gaps.length > 0 && <ul>{x.focal.gaps.map((s, i) => <li key={i}>{s}</li>)}</ul>}
-        <details><summary>{L('showWalk')}</summary><ol>{x.focal.walk.map((s, i) => <li key={i}>{s}</li>)}</ol></details>
       </section>
 
       <section aria-labelledby="deb-b-h" id="deb-b">
         <h3 id="deb-b-h">{L('titleB')}</h3>
+        <details><summary>{L('showTable')}</summary>
         <table className="who">
           <thead><tr><th scope="col">{L('colType')}</th><th scope="col">{L('colShare')}</th><th scope="col">{L('colResult')}</th><th scope="col">{L('colRooms')}</th></tr></thead>
           <tbody>{x.others.map((p) => (
@@ -62,6 +62,7 @@ export default function Debrief({ d }: { d: GameData }) {
           <dt>{t(d, lang, 'deb_info')}</dt><dd>{b(x.dims.info)}</dd>
           <dt>{t(d, lang, 'deb_richness')}</dt><dd>{b(x.dims.richness)}<br /><span className="note">{local(lang, 'richHint')}</span></dd>
         </dl>
+        </details>
       </section>
 
       <section aria-labelledby="deb-c-h" id="deb-c" aria-busy={!eff}>

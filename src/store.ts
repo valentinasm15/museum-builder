@@ -5,12 +5,16 @@ import { Plan, score, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
 export type Phase = 'planning' | 'visiting' | 'debrief'
+/** What the scene shows during the walkthrough: where the visitor stands (grid tile), the break in the route, and a mark per room already visited. */
+export interface WalkView { at: [number, number]; barrier?: [number, number]; marks: Record<string, { icon: string; text: string }> }
 
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang
   placements: Placement[]; selected: string | null; announcement: string
   sound: boolean; setSound: (on: boolean) => void // click cues, off by default, remembered in the browser
   visit: Visit; round: number; phase: Phase
+  walk: { pid: string; i: number }; setWalk: (w: Partial<{ pid: string; i: number }>) => void
+  walkView: WalkView | null; setWalkView: (v: WalkView | null) => void
   focus: string | null // zone id shown as selected in both the scene and the Room text view
   setFocus: (id: string | null) => void
   init: (data: GameData) => void
@@ -122,14 +126,15 @@ export const useGame = create<State>((set, get) => {
   }
   return {
     data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', sound: soundSaved(), focus: null, visit: noVisit, round: 1, phase: 'planning',
+    walk: { pid: '', i: 0 }, setWalk: (w) => set({ walk: { ...get().walk, ...w } }), walkView: null, setWalkView: (walkView) => set({ walkView }),
     setFocus: (focus) => set({ focus }),
     init: (base) => {
       const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
       set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })
     },
-    openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null }) },
+    openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null, walk: { pid: get().visit.personaId, i: 0 } }) },
     openDebrief: () => set({ phase: 'debrief' }),
-    closeVisit: () => set({ phase: 'planning' }),
+    closeVisit: () => set({ phase: 'planning', walkView: null }),
     startRound: (n) => {
       const { data, lang, visit: prev } = get()
       if (!data) return

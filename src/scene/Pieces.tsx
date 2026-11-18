@@ -1,5 +1,7 @@
 import { Edges, Html, RoundedBox } from '@react-three/drei'
-import type { ReactNode } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { useRef, type ReactNode } from 'react'
+import type { Group } from 'three'
 import type { GameData, Item, Segment } from '../data/load'
 import { lookOf, P, type Shape } from './look'
 
@@ -29,8 +31,8 @@ export function ItemBlock({ item, pos, active }: { item: Item; pos: [number, num
 }
 
 /** A low platform with a button label (real HTML) and clickable body. Children are positioned relative to its centre. */
-export function Platform({ d, x, y, w, h, label, num, hint, selected, target, onPick, children }: {
-  d: GameData; x: number; y: number; w: number; h: number; label: string; num: string | number; hint?: string; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
+export function Platform({ d, x, y, w, h, label, num, hint, mark, selected, target, onPick, children }: {
+  d: GameData; x: number; y: number; w: number; h: number; label: string; num: string | number; hint?: string; mark?: { icon: string; text: string }; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
 }) {
   const [cx, cz] = world(d, x + w / 2, y + h / 2)
   return (
@@ -43,7 +45,7 @@ export function Platform({ d, x, y, w, h, label, num, hint, selected, target, on
       </RoundedBox>
       {children}
       <Html position={[w > 5 ? 1.5 - w / 2 : 0, 0.9, 0]} center zIndexRange={[10, 0]}>
-        <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span><span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}</span></button>
+        <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button>
       </Html>
     </group>
   )
@@ -86,5 +88,33 @@ export function Wall({ cx, cz, len, horiz, h }: { cx: number; cz: number; len: n
         <meshStandardMaterial color={P.trim} roughness={0.8} />
       </RoundedBox>
     </group>
+  )
+}
+
+/** The visitor (a simple figure that walks to each stop) and, where the route breaks, a red ring. Motion is skipped when reduced motion is on. */
+export function Walker({ d, at, barrier }: { d: GameData; at: [number, number]; barrier?: [number, number] }) {
+  const ref = useRef<Group>(null), placed = useRef(false)
+  const [tx, tz] = world(d, at[0], at[1])
+  useFrame((_, dt) => {
+    const g = ref.current
+    if (!g) return
+    if (!placed.current || document.documentElement.dataset.motion === 'reduce') { g.position.set(tx, 0, tz); placed.current = true; return }
+    const k = Math.min(1, dt * 3)
+    g.position.x += (tx - g.position.x) * k; g.position.z += (tz - g.position.z) * k
+  })
+  const [bx, bz] = barrier ? world(d, barrier[0], barrier[1]) : [0, 0]
+  return (
+    <>
+      <group ref={ref}>
+        <mesh position={[0, 0.5, 0]} castShadow><capsuleGeometry args={[0.22, 0.5, 6, 12]} /><meshStandardMaterial color="#2b6cb0" /></mesh>
+        <mesh position={[0, 1.2, 0]} castShadow><sphereGeometry args={[0.2, 16, 16]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+      </group>
+      {barrier && (
+        <group position={[bx, 0.1, bz]}>
+          <mesh rotation-x={-Math.PI / 2}><ringGeometry args={[0.55, 0.8, 32]} /><meshBasicMaterial color="#a3001b" /></mesh>
+          <Html position={[0, 0.9, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}><span aria-hidden="true" className="elabel bad">✕</span></Html>
+        </group>
+      )}
+    </>
   )
 }

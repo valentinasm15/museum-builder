@@ -2,7 +2,7 @@ import type { GameData, Persona } from '../data/load'
 import { budget, itemName, money, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
 import { bundles, candidates, marginalContributions, type moneyEfficiency } from './benchmark'
 import { Plan, score, type Placement, type VisitContext } from './score'
-import { visit as walk } from './visit'
+import { stops, visit as walk } from './visit'
 
 export type Band = 'partial' | 'good' | 'strong'
 /** Band edges come from the Scoring sheet (band_good, band_strong) when present; the defaults are an assumption to validate. */
@@ -44,7 +44,8 @@ const LOCAL = {
   colType: { en: 'Visitor type', fi: 'Kävijätyyppi' }, colShare: { en: 'Share', fi: 'Osuus' }, colResult: { en: 'Result', fi: 'Tulos' }, colRooms: { en: 'Rooms', fi: 'Huoneet' },
   checks: { en: 'Three checks', fi: 'Kolme tarkistusta' },
   wasted: { en: "Spent on items that don't work yet", fi: 'Käytetty kohteisiin, jotka eivät vielä toimi' },
-  bestBuy: { en: 'Best buy', fi: 'Paras ostos' }, weakBuy: { en: 'Weakest buy', fi: 'Heikoin ostos' },
+  bestBuy: { en: 'Biggest effect', fi: 'Suurin vaikutus' }, weakBuy: { en: 'Smallest effect', fi: 'Pienin vaikutus' },
+  showTable: { en: 'Show all visitor types', fi: 'Näytä kaikki kävijätyypit' },
   benchLine: { en: 'Benchmark at your spend: {band} ({bench}; you {you}).', fi: 'Vertailu samalla summalla: {band} ({bench}; sinä {you}).' },
   moreTrade: { en: 'Trade-offs in your plan', fi: 'Suunnitelmasi valinnat' },
   nextBuy: { en: 'Best next buy: {what} ({cost}), about +{points} points.', fi: 'Paras seuraava ostos: {what} ({cost}), noin +{points} pistettä.' },
@@ -132,11 +133,7 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
   const plan = new Plan(d, placements, ctx)
   const route = d.items.find((i) => i.scope === 'path')
   const names = visitNames(d, lang, v)
-  const rooms = d.zones.map((z) => {
-    const keys = events.filter((e) => e.zoneId === z.id).map((e) => e.key)
-    const status = keys.includes('not_reachable') ? 'none' : keys.includes('walk_no_info') ? 'empty' : keys.includes('walk_reach_plan') ? 'partial' : 'full'
-    return { id: z.id, name: targetName(d, lang, z.id), status } as { id: string; name: string; status: 'full' | 'partial' | 'empty' | 'none' }
-  })
+  const rooms = stops(d, placements, persona, ctx, lang).filter((s) => s.kind === 'room').map((s) => ({ id: s.id, name: s.name, status: s.status as 'full' | 'partial' | 'empty' | 'none' })) // one source of truth: the walkthrough stops
   const list = (st: string[]) => rooms.filter((r) => st.includes(r.status)).map((r) => r.name).join(', ')
   const lacking = rooms.filter((r) => r.status === 'none' || r.status === 'partial')
   const segs = new Set(lacking.flatMap((r) => plan.chain(d.zones.find((z) => z.id === r.id)!.routeSegment).filter((s) => !plan.segmentExists(s))))
