@@ -109,7 +109,7 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
       info: band(d, weighted(d, (p, z) => zr(p, z).info)),
       richness: band(d, weighted(d, (p, z) => (zr(p, z).channels.filter((c) => c !== 'visual').length >= min ? 1 : 0))),
     },
-    leftOut: d.personas.filter((p) => std.leftOut.includes(p.id)).map((p) => nameOf(p, lang)),
+    leftOut: d.personas.filter((p) => std.leftOut.includes(p.id)).map((p) => `${nameOf(p, lang)} (${d.zones.filter((z) => std.zones[z.id][p.id].score === 0).length}/${d.zones.length})`),
     inactiveTotal,
     values: marg.filter((x) => !SIDE.has(items.get(x.placement.item)?.kind ?? '')).sort((a, b) => b.delta - a.delta).map((x) =>
       t(d, lang, 'deb_item_value', { item: label(x.placement), cost: money(lang, x.cost), n: x.helped.length, total: d.personas.length, points: Math.round(x.delta * 100) })),

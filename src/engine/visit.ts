@@ -24,7 +24,7 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
 
   say('walk_enter', { persona: pname })
   if (grants('plan_only')) say('walk_plan')
-  let seen = 0
+  let seen = 0, partial = 0 // partial: found only through the floor plan
   for (const z of d.zones) {
     const zn = zoneName(z, lang)
     const how = plan.routeComplete(z) ? 'route'
@@ -39,10 +39,11 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
       say('walk_info', { zone: zn, channels: chans.join(', ') }, z.id)
       if (r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) say('walk_one_channel', { zone: zn }, z.id)
     }
-    if (r.score > 0) seen++
+    if (r.score > 0) { seen++; if (how === 'plan') partial++ }
     inactive((a) => a === z.id, z.id)
   }
   inactive((a) => !d.zones.some((z) => z.id === a))
-  say('walk_end', { n: seen, total: d.zones.length })
+  if (partial) say('walk_end_partial', { n: seen - partial, m: partial, total: d.zones.length })
+  else say('walk_end', { n: seen, total: d.zones.length })
   return ev
 }

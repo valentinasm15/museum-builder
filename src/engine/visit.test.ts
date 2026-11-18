@@ -50,3 +50,10 @@ it('no audio guide today: device-based audio is missing from the narrative', () 
   expect(audio({ hasMuseumDevice: true })).toContain(t(d, 'en', 'ch_audio'))
   expect(audio({ hasMuseumDevice: false })).not.toContain(t(d, 'en', 'ch_audio'))
 })
+
+it('rooms found only through the floor plan are counted as partly experienced, not fully', () => {
+  const ps = [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: back.id }]
+  const ev = visit(d, ps, noPhone, { hasMuseumDevice: true })
+  expect(ev[ev.length - 1].key).toBe('walk_end_partial')
+  expect(ev[ev.length - 1].text).toMatch(/only partly/)
+})
