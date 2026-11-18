@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { loadData } from '../data/load'
 import { Plan, score } from './score'
-import { visit } from './visit'
+import { stops, visit } from './visit'
 import { t } from '../store'
 
 const d = loadData(readFileSync('src/data/museum-builder-data.xlsx'))
@@ -56,4 +56,50 @@ it('rooms found only through the floor plan are counted as partly experienced, n
   const ev = visit(d, ps, noPhone, { hasMuseumDevice: true })
   expect(ev[ev.length - 1].key).toBe('walk_end_partial')
   expect(ev[ev.length - 1].text).toMatch(/only partly/)
+})
+
+const routeCost = d.items.find((i) => i.scope === 'path')!.costEur
+const P = (item: string, at: string) => ({ item, at })
+
+it('stops: entrance first, one stop per room in order, no unfilled placeholders (EN/FI)', () => {
+  for (const lang of ['en', 'fi'] as const) {
+    const s = stops(d, [P('audio_guide_devices', ''), P('audio_description', back.id)], noPhone, { hasMuseumDevice: true }, lang)
+    expect(s[0].kind).toBe('entrance')
+    expect(s.filter((x) => x.kind === 'room').map((x) => x.zoneId)).toEqual(d.zones.map((z) => z.id))
+    const all = s.flatMap((x) => [x.name, ...x.works.map((w) => w.text), ...x.fails.flatMap((f) => [f.text, f.fix?.text ?? ''])]).join(' ')
+    expect(all).not.toMatch(/[{}]|undefined|NaN|\[/)
+  }
+})
+
+it('stops: a room beyond the route is cut off at the break and the fix is the missing segments', () => {
+  const room = stops(d, [], noPhone).find((x) => x.zoneId === back.id)!
+  const missing = new Plan(d, []).chain(back.routeSegment).filter((s) => !new Plan(d, []).segmentExists(s))
+  expect(room.breakAt).toBe(missing[0])
+  expect(['partial', 'none']).toContain(room.status)
+  expect(room.fails[0].fix?.cost).toBe(missing.length * routeCost)
+  expect(room.fails[0].fix?.items).toHaveLength(missing.length)
+})
+
+it('stops: devices with no audio content wait at the entrance; with content the room points back to them', () => {
+  const idle = stops(d, [P('audio_guide_devices', '')], noPhone, { hasMuseumDevice: true }).find((x) => x.kind === 'entrance')!
+  expect(idle.fails.some((f) => /waiting/.test(f.text))).toBe(true)
+  const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
+  const used = stops(d, [P('audio_guide_devices', ''), P('audio_description', near.id)], noPhone, { hasMuseumDevice: true })
+  expect(used.find((x) => x.zoneId === near.id)!.works.some((w) => w.via?.includes('audio_guide_devices'))).toBe(true)
+  expect(used.find((x) => x.kind === 'entrance')!.fails.some((f) => /waiting/.test(f.text))).toBe(false)
+})
+
+it('stops: a reached room with nothing to use offers a fix with a real price', () => {
+  const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
+  const blind = d.personas.find((p) => !p.attrs.residualVision && !p.attrs.needsContinuousRoute && p.attrs.usesSmartphone)!
+  const room = stops(d, [], blind, {}).find((x) => x.zoneId === near.id)!
+  expect(room.status).toBe('empty')
+  expect(room.fails[0].fix?.cost).toBeGreaterThan(0)
+}, 30000)
+
+it('stops: an item the visitor cannot use is named as not for them', () => {
+  const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
+  const lowv = d.personas.find((p) => !p.attrs.readsBraille)!
+  const room = stops(d, [P('braille_label', near.id)], lowv).find((x) => x.zoneId === near.id)!
+  expect(room.fails.some((f) => /does not help this visitor/.test(f.text))).toBe(true)
 })
