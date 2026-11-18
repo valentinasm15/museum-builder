@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { GameData } from '../data/load'
 import { budget, levelName, money, t, useGame } from '../store'
 
-// Step 0 is the welcome; steps 1-4 point at a part of the screen. The highlight is decoration: every step is also plain text.
-const TARGETS = ['', '.toolkit', '.play > .scene', '.toolkit .tiles', 'header .budget']
+// Steps 0-1 are the mission and the visitor card; 2-6 point at a part of the screen (6 = the launch button). The highlight is decoration: every step is also plain text.
+const TARGETS = ['', '', '.toolkit', '.play > .scene', '.toolkit .tiles', 'header .budget', 'header .submit']
 
 export default function Intro({ d, open, onClose }: { d: GameData; open: boolean; onClose: () => void }) {
   const { lang, level, setLevel, visit } = useGame()
@@ -48,16 +48,17 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
 
   const vp = d.personas.find((p) => p.id === visit.personaId), vs = d.situations.find((x) => x.id === visit.situationId)
   const pn = vp && ((lang === 'fi' && vp.nameFi) || vp.name), sn = vs && ((lang === 'fi' && vs.nameFi) || vs.name)
-  const title = step === 0 ? t(d, lang, 'intro_title') : t(d, lang, 'intro_step', { n: String(step), total: String(last) })
+  const eyebrow = `${t(d, lang, 'intro_title')} · ${t(d, lang, 'intro_step', { n: String(step + 1), total: String(last + 1) })}`
   return (
     <>
       {open && rect && <div className="spot" aria-hidden="true" style={{ top: rect.top - 6, left: rect.left - 6, width: rect.width + 12, height: rect.height + 12 }} />}
       <dialog ref={ref} className={pos ? 'intro tour' : 'intro'} style={pos ?? undefined} aria-labelledby="intro-h" onClose={onClose}>
         <button type="button" className="xbtn" aria-label={lang === 'fi' ? 'Sulje' : 'Close'} title={lang === 'fi' ? 'Sulje' : 'Close'} onClick={() => ref.current?.close()}><span aria-hidden="true">✕</span></button>
         <div aria-live="polite">
-          <h2 id="intro-h">{title}</h2>
-          <p>{step === 0 ? t(d, lang, 'intro_goal') : t(d, lang, `intro_${step}`)}</p>
+          <p className="note">{eyebrow}</p>
+          <h2 id="intro-h">{t(d, lang, `intro_h${step}`)}</h2>
           {step === 0 && <>
+            <p>{t(d, lang, 'intro_goal')}</p>
             <fieldset className="levels">
               <legend>{t(d, lang, 'level')}</legend>
               {d.levels.map((l) => (
@@ -69,8 +70,14 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
               <p className="note">{t(d, lang, 'level_hint')}</p>
             </fieldset>
             <p><strong>{t(d, lang, 'challenge', { budget: money(lang, budget(d)) })}</strong></p>
+          </>}
+          {step === 1 && <>
             {pn && sn && <p><strong>{t(d, lang, 'intro_visitor', { persona: pn, situation: sn })}</strong></p>}
-            <p>{t(d, lang, 'visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join('; ')}.</p>
+            <details><summary>{t(d, lang, 'intro_all_visitors')}</summary><ul>{d.personas.map((p) => <li key={p.id}>{(lang === 'fi' && p.nameFi) || p.name}</li>)}</ul></details>
+          </>}
+          {step >= 2 && step < last && <p>{t(d, lang, `intro_${step - 1}`)}</p>}
+          {step === last && <>
+            <p>{t(d, lang, 'intro_launch', { button: t(d, lang, 'open_museum'), persona: pn ?? '' })}</p>
             <p className="note">{t(d, lang, 'model_disclaimer')}</p>
           </>}
         </div>
