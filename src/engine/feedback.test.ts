@@ -3,7 +3,7 @@ import { expect, it } from 'vitest'
 import { loadData } from '../data/load'
 import { money, type Visit } from '../store'
 import { moneyEfficiency } from './benchmark'
-import { band, debrief, efficiency, tradeoffs } from './feedback'
+import { band, debrief, efficiency, nextStep, tradeoffs } from './feedback'
 import { score } from './score'
 
 const d = loadData(readFileSync('src/data/museum-builder-data.xlsx'))
@@ -64,4 +64,19 @@ it('benchmark advice never recommends staff items on an unstaffed day', () => {
   const staff = d.items.filter((i) => i.reachGrant === 'staff_guided' || i.id === 'guided_touch_tour').map((i) => i.name)
   const e = efficiency(d, 'en', ps, me, { staffAvailable: false })
   for (const n of staff) expect(e.diff).not.toMatch(new RegExp(`on ${n.replace(/[()]/g, '\\$&')} instead`)) // the swapped-in item must work today
+}, 60000)
+
+it('debrief page data: a room status per zone, verdict counts, gap and a next step', () => {
+  const ps = [{ item: 'large_print_label', at: d.zones[0].id }]
+  for (const lang of ['en', 'fi'] as const) {
+    const x = debrief(d, ps, v('with_audio_guide'), lang)
+    expect(x.focal.rooms).toHaveLength(d.zones.length)
+    expect(x.verdict.total).toBe(d.personas.length)
+    expect(x.verdict.works).toBe(x.others.filter((o) => o.band !== 'partial').length)
+    expect(x.others.every((o) => o.rooms >= 0 && o.rooms <= o.total)).toBe(true)
+    const text = [x.verdict.gap, ...x.focal.gaps].join(' ')
+    expect(text).not.toMatch(/[{}]|NaN|undefined/)
+    const n = nextStep(d, lang, ps)
+    expect(n).not.toMatch(/[{}]|NaN|undefined/)
+  }
 }, 60000)

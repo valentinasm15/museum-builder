@@ -1,6 +1,6 @@
 import type { GameData, Persona } from '../data/load'
-import { itemName, money, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
-import { marginalContributions, type moneyEfficiency } from './benchmark'
+import { budget, itemName, money, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
+import { bundles, candidates, marginalContributions, type moneyEfficiency } from './benchmark'
 import { Plan, score, type Placement, type VisitContext } from './score'
 import { visit as walk } from './visit'
 
@@ -23,8 +23,37 @@ const LOCAL = {
   richHint: { en: 'Share of zone visits with two or more non-visual ways to take in the exhibit.', fi: 'Osuus alueiden vierailuista, joissa näyttelyn voi kokea vähintään kahdella ei-visuaalisella tavalla.' },
   bench: { en: 'benchmark', fi: 'vertailu' },
   you: { en: 'you', fi: 'sinä' },
+  navA: { en: "Today's visitor", fi: 'Päivän kävijä' },
+  navB: { en: 'All visitor types', fi: 'Kaikki kävijätyypit' },
+  navC: { en: 'Your money', fi: 'Rahasi' },
+  navD: { en: 'Next step', fi: 'Seuraava askel' },
+  titleA: { en: "A. Today's visitor, today's conditions", fi: 'A. Päivän kävijä, päivän olosuhteet' },
+  titleB: { en: 'B. All visitor types, on a normal day', fi: 'B. Kaikki kävijätyypit, tavallisena päivänä' },
+  titleC: { en: 'C. Your money', fi: 'C. Rahasi' },
+  titleD: { en: 'D. Next step', fi: 'D. Seuraava askel' },
+  verdict: { en: 'Your plan works for {n} of {total} visitor types.', fi: 'Suunnitelmasi toimii {n}/{total} kävijätyypille.' },
+  gapOne: { en: 'Biggest gap: {name} reached {k} of {n} rooms.', fi: 'Suurin aukko: {name} pääsi {k}/{n} huoneeseen.' },
+  gapMany: { en: 'Biggest gap: {c} visitor types reached no room at all.', fi: 'Suurin aukko: {c} kävijätyyppiä ei päässyt yhteenkään huoneeseen.' },
+  spentOf: { en: 'Spent {spent} of {budget}', fi: 'Käytetty {spent} / {budget}' },
+  roomsLegend: { en: 'Full = reached with something to use · Partly = found only via the floor plan · Empty = reached, nothing to use · None = cannot reach', fi: 'Täysi = perillä ja käytettävää · Osittain = löytyi vain kartasta · Tyhjä = perillä, ei käytettävää · Ei = ei pääse' },
+  st_full: { en: 'Full', fi: 'Täysi' }, st_partial: { en: 'Partly', fi: 'Osittain' }, st_empty: { en: 'Empty', fi: 'Tyhjä' }, st_none: { en: 'None', fi: 'Ei' },
+  worked: { en: 'What worked: {rooms}.', fi: 'Toimi: {rooms}.' },
+  needRoute: { en: "Needs a tactile route: {rooms} ({cost}).", fi: 'Tarvitsee opaslinjan: {rooms} ({cost}).' },
+  emptyRooms: { en: 'Reached, but nothing this visitor can use: {rooms}.', fi: 'Perillä, mutta ei käytettävää tälle kävijälle: {rooms}.' },
+  showWalk: { en: 'Show the full walkthrough', fi: 'Näytä koko kierros' },
+  colType: { en: 'Visitor type', fi: 'Kävijätyyppi' }, colShare: { en: 'Share', fi: 'Osuus' }, colResult: { en: 'Result', fi: 'Tulos' }, colRooms: { en: 'Rooms', fi: 'Huoneet' },
+  checks: { en: 'Three checks', fi: 'Kolme tarkistusta' },
+  wasted: { en: "Spent on items that don't work yet", fi: 'Käytetty kohteisiin, jotka eivät vielä toimi' },
+  bestBuy: { en: 'Best buy', fi: 'Paras ostos' }, weakBuy: { en: 'Weakest buy', fi: 'Heikoin ostos' },
+  benchLine: { en: 'Benchmark at your spend: {band} ({bench}; you {you}).', fi: 'Vertailu samalla summalla: {band} ({bench}; sinä {you}).' },
+  moreTrade: { en: 'Trade-offs in your plan', fi: 'Suunnitelmasi valinnat' },
+  nextBuy: { en: 'Best next buy: {what} ({cost}), about +{points} points.', fi: 'Paras seuraava ostos: {what} ({cost}), noin +{points} pistettä.' },
+  nextNone: { en: 'Nothing you can still afford adds access. Consider removing something that does not pay off.', fi: 'Mikään jäljellä olevalla rahalla ostettava ei lisää saavutettavuutta. Harkitse heikon ostoksen poistamista.' },
+  left: { en: 'left', fi: 'jäljellä' },
+  roundOf: { en: 'Round {n} of {total}', fi: 'Kierros {n}/{total}' },
 }
-export const local = (lang: Lang, k: keyof typeof LOCAL) => LOCAL[k][lang]
+export const local = (lang: Lang, k: keyof typeof LOCAL, vars: Record<string, string | number> = {}) =>
+  LOCAL[k][lang].replace(/\{(\w+)\}/g, (m, v) => (v in vars ? String(vars[v]) : m))
 
 /** Weighted (visitorShare) mean of f over personas, each persona's value being the mean over zones. */
 function weighted(d: GameData, f: (p: Persona, zoneId: string) => number) {
@@ -91,26 +120,48 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
   const day = score(d, placements, ctx)
   const persona = d.personas.find((p) => p.id === v.personaId) ?? d.personas[0]
   const events = walk(d, placements, persona, ctx, lang)
-  const names = visitNames(d, lang, v)
   const min = d.scoring.min_channels_full_value
   const zr = (p: Persona, z: string) => std.zones[z][p.id]
   const items = d.items.reduce((m, i) => m.set(i.id, i), new Map<string, (typeof d.items)[number]>())
   const marg = marginalContributions(d, placements)
   const label = (pl: Placement) => `${itemName(lang, items.get(pl.item)!)} (${targetName(d, lang, pl.at)})`
   const single = (pl: Placement) => new Plan(d, [pl]).cost()
+  const plan = new Plan(d, placements, ctx)
+  const route = d.items.find((i) => i.scope === 'path')
+  const names = visitNames(d, lang, v)
+  const rooms = d.zones.map((z) => {
+    const keys = events.filter((e) => e.zoneId === z.id).map((e) => e.key)
+    const status = keys.includes('not_reachable') ? 'none' : keys.includes('walk_no_info') ? 'empty' : keys.includes('walk_reach_plan') ? 'partial' : 'full'
+    return { id: z.id, name: targetName(d, lang, z.id), status } as { id: string; name: string; status: 'full' | 'partial' | 'empty' | 'none' }
+  })
+  const list = (st: string[]) => rooms.filter((r) => st.includes(r.status)).map((r) => r.name).join(', ')
+  const lacking = rooms.filter((r) => r.status === 'none' || r.status === 'partial')
+  const segs = new Set(lacking.flatMap((r) => plan.chain(d.zones.find((z) => z.id === r.id)!.routeSegment).filter((s) => !plan.segmentExists(s))))
+  const gaps = [
+    list(['full']) && local(lang, 'worked', { rooms: list(['full']) }),
+    segs.size && route ? local(lang, 'needRoute', { rooms: lacking.map((r) => r.name).join(', '), cost: money(lang, segs.size * route.costEur) }) : '',
+    list(['empty']) && local(lang, 'emptyRooms', { rooms: list(['empty']) }),
+  ].filter(Boolean)
+  const roomsOf = (p: Persona) => d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length
+  const others = d.personas.map((p) => ({ id: p.id, name: nameOf(p, lang), share: p.visitorShare, band: band(d, std.personas[p.id]), rooms: roomsOf(p), total: d.zones.length }))
+  const zero = others.filter((o) => o.rooms === 0), weakest = [...others].sort((a, b) => a.rooms - b.rooms)[0]
+  const gap = zero.length > 1 ? local(lang, 'gapMany', { c: zero.length })
+    : weakest && weakest.rooms < weakest.total ? local(lang, 'gapOne', { name: weakest.name, k: weakest.rooms, n: weakest.total }) : ''
   const inactiveTotal = std.inactive.filter((x) => placements.some((p) => p.item === x.placement.item && p.at === x.placement.at)).reduce((a, x) => a + single(x.placement), 0)
   return {
     band: band(d, std.overall),
     focal: { persona: names.persona, situation: names.situation, band: band(d, day.personas[persona.id] ?? 0),
-      skipped: events.filter((e) => e.key === 'not_reachable').map((e) => e.text), end: events[events.length - 1].text },
-    others: d.personas.map((p) => ({ id: p.id, name: nameOf(p, lang), share: p.visitorShare, band: band(d, std.personas[p.id]) })),
+      skipped: events.filter((e) => e.key === 'not_reachable').map((e) => e.text), end: events[events.length - 1].text,
+      rooms, gaps, walk: events.map((e) => e.text) },
+    verdict: { works: others.filter((o) => o.band !== 'partial').length, total: others.length, gap },
+    others,
     dims: {
       reach: band(d, weighted(d, (p, z) => zr(p, z).reach)),
       info: band(d, weighted(d, (p, z) => zr(p, z).info)),
       richness: band(d, weighted(d, (p, z) => (zr(p, z).channels.filter((c) => c !== 'visual').length >= min ? 1 : 0))),
     },
     leftOut: d.personas.filter((p) => std.leftOut.includes(p.id)).map((p) => `${nameOf(p, lang)} (${d.zones.filter((z) => std.zones[z.id][p.id].score === 0).length}/${d.zones.length})`),
-    inactiveTotal,
+    inactiveTotal, spent: std.spent, budget: budget(d),
     values: marg.filter((x) => !SIDE.has(items.get(x.placement.item)?.kind ?? '')).sort((a, b) => b.delta - a.delta).map((x) =>
       t(d, lang, 'deb_item_value', { item: label(x.placement), cost: money(lang, x.cost), n: x.helped.length, total: d.personas.length, points: Math.round(x.delta * 100) })),
     side: marg.filter((x) => SIDE.has(items.get(x.placement.item)?.kind ?? '')).map((x) => `${label(x.placement)}: ${money(lang, x.cost)}`),
@@ -134,4 +185,23 @@ export function efficiency(d: GameData, lang: Lang, placements: Placement[], me:
     unspent: t(d, lang, 'deb_unspent', { amount: money(lang, me.unspent) }),
     diff: bt && pt ? t(d, lang, 'deb_benchmark_diff', { amount: money(lang, bt[1]), item: nm(bt[0]), other: nm(pt[0]) }) : '',
   }
+}
+
+/** Best affordable next purchase (access gain per euro), as one sentence. Slow like the benchmark: call it off the main render. */
+export function nextStep(d: GameData, lang: Lang, placements: Placement[]): string {
+  const plan = new Plan(d, placements), base = score(d, placements).overall, left = budget(d) - plan.cost()
+  const name = (id: string) => itemName(lang, d.items.find((i) => i.id === id)!)
+  let best: { add: Placement[]; cost: number; gain: number; ratio: number } | null = null
+  for (const c of candidates(d)) for (const add of bundles(plan, c)) {
+    if (!add.length) continue
+    const next = [...placements, ...add], cost = new Plan(d, next).cost() - plan.cost()
+    if (cost <= 0 || cost > left) continue
+    const gain = score(d, next).overall - base
+    if (gain > 1e-9 && (!best || gain / cost > best.ratio)) best = { add, cost, gain, ratio: gain / cost }
+  }
+  if (!best) return local(lang, 'nextNone')
+  const main = best.add.find((p) => p.at !== '' ) ?? best.add[0]
+  const extras = [...new Set(best.add.filter((p) => p.item !== main.item).map((p) => p.item))].map(name)
+  const what = [`${name(main.item)}${main.at ? `, ${targetName(d, lang, main.at)}` : ''}`, ...extras].join(' + ')
+  return local(lang, 'nextBuy', { what, cost: money(lang, best.cost), points: Math.max(1, Math.round(best.gain * 100)) })
 }
