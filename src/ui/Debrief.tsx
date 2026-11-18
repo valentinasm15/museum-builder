@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameData } from '../data/load'
 import { moneyEfficiency } from '../engine/benchmark'
 import { bandText, debrief, efficiency, local } from '../engine/feedback'
-import { money, t, useGame } from '../store'
+import { money, t, useGame, visitCtx } from '../store'
 
 // Plain headings, lists and text: reads in order with a screen reader, no animation.
 export default function Debrief({ d }: { d: GameData }) {
@@ -11,7 +11,7 @@ export default function Debrief({ d }: { d: GameData }) {
   const nextBtn = useRef<HTMLButtonElement>(null)
   const [me, setMe] = useState<ReturnType<typeof moneyEfficiency> | null>(null)
   const x = useMemo(() => debrief(d, placements, v, lang), [d, placements, v, lang])
-  const eff = useMemo(() => (me ? efficiency(d, lang, placements, me) : null), [d, lang, placements, me])
+  const eff = useMemo(() => (me ? efficiency(d, lang, placements, me, visitCtx(d, v)) : null), [d, lang, placements, me, v])
   const more = round < (d.settings.rounds ?? 1)
   const b = (k: Parameters<typeof bandText>[2]) => bandText(d, lang, k)
   const close = lang === 'fi' ? 'Sulje' : 'Close'

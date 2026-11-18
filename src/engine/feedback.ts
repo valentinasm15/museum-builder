@@ -1,7 +1,7 @@
 import type { GameData, Persona } from '../data/load'
 import { itemName, money, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
 import { marginalContributions, type moneyEfficiency } from './benchmark'
-import { Plan, score, type Placement } from './score'
+import { Plan, score, type Placement, type VisitContext } from './score'
 import { visit as walk } from './visit'
 
 export type Band = 'partial' | 'good' | 'strong'
@@ -119,9 +119,12 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
 }
 
 /** Money efficiency lines from moneyEfficiency(): player ÷ full-budget benchmark (primary), same-spend benchmark, unspent, one concrete difference. */
-export function efficiency(d: GameData, lang: Lang, placements: Placement[], me: ReturnType<typeof moneyEfficiency>) {
+export function efficiency(d: GameData, lang: Lang, placements: Placement[], me: ReturnType<typeof moneyEfficiency>, ctx: VisitContext = {}) {
   const spend = (ps: Placement[]) => ps.reduce((m, p) => m.set(p.item, (m.get(p.item) ?? 0) + new Plan(d, [p]).cost()), new Map<string, number>())
-  const top = (a: Map<string, number>, b: Map<string, number>) => [...a].filter(([k]) => !b.has(k)).sort((x, y) => y[1] - x[1])[0]
+  // The benchmark plans a standard day; do not advise swapping in something that cannot work in today's situation.
+  const idle = (id: string) => { const i = d.items.find((x) => x.id === id)
+    return (ctx.staffAvailable === false && (i?.reachGrant === 'staff_guided' || id === 'guided_touch_tour')) || (ctx.hasMuseumDevice === false && id === 'audio_guide_devices') || (ctx.phoneWorks === false && i?.reach === 'usesSmartphone') }
+  const top = (a: Map<string, number>, b: Map<string, number>) => [...a].filter(([k]) => !b.has(k) && !idle(k)).sort((x, y) => y[1] - x[1])[0]
   const mine = spend(placements), theirs = spend(me.benchmarkAtSpend.placements)
   const bt = top(theirs, mine), pt = top(mine, theirs)
   const nm = (id: string) => itemName(lang, d.items.find((i) => i.id === id)!)

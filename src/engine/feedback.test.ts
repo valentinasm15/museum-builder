@@ -57,3 +57,11 @@ it('money efficiency = player ÷ full-budget benchmark, plus same-spend benchmar
   expect(e.unspent).toContain(money('en', me.unspent))
   expect(e.diff).not.toMatch(/[{}]/)
 }, 60000)
+
+it('benchmark advice never recommends staff items on an unstaffed day', () => {
+  const ps = [{ item: 'large_print_label', at: d.zones[0].id }]
+  const me = moneyEfficiency(d, ps)
+  const staff = d.items.filter((i) => i.reachGrant === 'staff_guided' || i.id === 'guided_touch_tour').map((i) => i.name)
+  const e = efficiency(d, 'en', ps, me, { staffAvailable: false })
+  for (const n of staff) expect(e.diff).not.toMatch(new RegExp(`on ${n.replace(/[()]/g, '\\$&')} instead`)) // the swapped-in item must work today
+}, 60000)
