@@ -80,3 +80,16 @@ it('debrief page data: a room status per zone, verdict counts, gap and a next st
     expect(n).not.toMatch(/[{}]|NaN|undefined/)
   }
 }, 60000)
+
+it('an enabler bought without content is idle, not the "weakest buy"; with content it is not idle', () => {
+  const z = d.zones[0].id
+  const alone = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'large_print_label', at: z }], v('with_audio_guide'), 'en')
+  expect(alone.idle).toHaveLength(1)
+  expect(alone.idle[0].cost).toBe(cost('audio_guide_devices'))
+  expect(alone.idle[0].text).toMatch(/waiting/)
+  expect(alone.values.some((s) => /Audio guide/.test(s))).toBe(false)
+  const used = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: z }], v('with_audio_guide'), 'en')
+  expect(used.idle).toHaveLength(0)
+  const far = debrief(d, [{ item: 'tactile_route', at: d.route.filter((s) => !s.existing)[1].id }], v('with_audio_guide'), 'fi')
+  expect(far.idle[0]?.text ?? '').not.toMatch(/[{}]|undefined/)
+}, 60000)

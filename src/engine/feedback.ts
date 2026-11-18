@@ -50,6 +50,9 @@ const LOCAL = {
   nextBuy: { en: 'Best next buy: {what} ({cost}), about +{points} points.', fi: 'Paras seuraava ostos: {what} ({cost}), noin +{points} pistettä.' },
   nextNone: { en: 'Nothing you can still afford adds access. Consider removing something that does not pay off.', fi: 'Mikään jäljellä olevalla rahalla ostettava ei lisää saavutettavuutta. Harkitse heikon ostoksen poistamista.' },
   left: { en: 'left', fi: 'jäljellä' },
+  idleWait: { en: '{item} ({cost}) is waiting: nothing you placed uses it yet. It carries {needs}.', fi: '{item} ({cost}) odottaa: mikään sijoittamasi ei käytä sitä vielä. Se tarvitsee sisältöä: {needs}.' },
+  idleRoute: { en: '{item} ({cost}, {where}) leads nowhere yet: the route is not connected to a room.', fi: '{item} ({cost}, {where}) ei johda vielä minnekään: reitti ei ulotu huoneeseen.' },
+  idleDup: { en: '{item} ({cost}) adds nothing now: something else already does the same job.', fi: '{item} ({cost}) ei lisää nyt mitään: jokin muu hoitaa jo saman tehtävän.' },
   roundOf: { en: 'Round {n} of {total}', fi: 'Kierros {n}/{total}' },
 }
 export const local = (lang: Lang, k: keyof typeof LOCAL, vars: Record<string, string | number> = {}) =>
@@ -142,6 +145,17 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
     segs.size && route ? local(lang, 'needRoute', { rooms: lacking.map((r) => r.name).join(', '), cost: money(lang, segs.size * route.costEur) }) : '',
     list(['empty']) && local(lang, 'emptyRooms', { rooms: list(['empty']) }),
   ].filter(Boolean)
+  // Bought, nothing missing, but no effect: the item waits for a partner (content, a connected route) or duplicates another.
+  const inactiveKeys = new Set(std.inactive.map((i) => `${i.placement.item}@${i.placement.at}`))
+  const dependents = (id: string) => d.items.filter((i) => i.requires.some((g) => g.includes(id)))
+  const idle = marg.filter((x) => x.cost > 0 && x.helped.length === 0 && x.delta < 1e-9 && !SIDE.has(items.get(x.placement.item)?.kind ?? '') && !inactiveKeys.has(`${x.placement.item}@${x.placement.at}`)).map((x) => {
+    const it = items.get(x.placement.item)!, deps = dependents(it.id)
+    const vars = { item: itemName(lang, it), cost: money(lang, x.cost), where: targetName(d, lang, x.placement.at), needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') }
+    const placedDeps = deps.some((i) => placements.some((p) => p.item === i.id))
+    const kind = it.scope === 'path' ? 'idleRoute' : deps.length && !placedDeps ? 'idleWait' : 'idleDup'
+    return { key: `${x.placement.item}@${x.placement.at}`, cost: x.cost, text: local(lang, kind, vars) }
+  })
+  const idleKeys = new Set(idle.map((i) => i.key))
   const roomsOf = (p: Persona) => d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length
   const others = d.personas.map((p) => ({ id: p.id, name: nameOf(p, lang), share: p.visitorShare, band: band(d, std.personas[p.id]), rooms: roomsOf(p), total: d.zones.length }))
   const zero = others.filter((o) => o.rooms === 0), weakest = [...others].sort((a, b) => a.rooms - b.rooms)[0]
@@ -162,7 +176,8 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
     },
     leftOut: d.personas.filter((p) => std.leftOut.includes(p.id)).map((p) => `${nameOf(p, lang)} (${d.zones.filter((z) => std.zones[z.id][p.id].score === 0).length}/${d.zones.length})`),
     inactiveTotal, spent: std.spent, budget: budget(d),
-    values: marg.filter((x) => !SIDE.has(items.get(x.placement.item)?.kind ?? '')).sort((a, b) => b.delta - a.delta).map((x) =>
+    idle,
+    values: marg.filter((x) => !SIDE.has(items.get(x.placement.item)?.kind ?? '') && !idleKeys.has(`${x.placement.item}@${x.placement.at}`)).sort((a, b) => b.delta - a.delta).map((x) =>
       t(d, lang, 'deb_item_value', { item: label(x.placement), cost: money(lang, x.cost), n: x.helped.length, total: d.personas.length, points: Math.round(x.delta * 100) })),
     side: marg.filter((x) => SIDE.has(items.get(x.placement.item)?.kind ?? '')).map((x) => `${label(x.placement)}: ${money(lang, x.cost)}`),
     notes: tradeoffs(d, lang, placements, v),

@@ -67,7 +67,8 @@ export default function Debrief({ d }: { d: GameData }) {
       <section aria-labelledby="deb-c-h" id="deb-c" aria-busy={!eff}>
         <h3 id="deb-c-h">{L('titleC')}</h3>
         <p><progress value={x.spent} max={x.budget || 1} aria-label={L('spentOf', { spent: money(lang, x.spent), budget: money(lang, x.budget) })} /> {money(lang, Math.max(0, x.budget - x.spent))} {L('left')}</p>
-        <p>{L('wasted')}: <strong>{money(lang, x.inactiveTotal)}</strong></p>
+        <p>{L('wasted')}: <strong>{money(lang, x.inactiveTotal + x.idle.reduce((a, i) => a + i.cost, 0))}</strong></p>
+        {x.idle.length > 0 && <ul>{x.idle.map((i) => <li key={i.key}>{i.text}</li>)}</ul>}
         {x.values.length > 0 && <ul>
           <li>{L('bestBuy')}: {x.values[0]}</li>
           {x.values.length > 1 && <li>{L('weakBuy')}: {x.values[x.values.length - 1]}</li>}
