@@ -121,19 +121,22 @@ export default function Scene({ d }: { d: GameData }) {
   useEffect(() => {
     const el = box.current
     const onWheel = (e: WheelEvent) => { e.preventDefault(); zoomBy(Math.exp(-e.deltaY * 0.001)) }
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const tg = e.target as HTMLElement
+      if (e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName) || tg.isContentEditable) return
+      const k = e.key.toLowerCase()
+      if (k === 'q') setRot((r) => r - 1)
+      else if (k === 'e') setRot((r) => r + 1)
+      else if (k === '+' || k === '=') zoomBy(1.2)
+      else if (k === '-' || k === '_') zoomBy(1 / 1.2)
+    }
     el?.addEventListener('wheel', onWheel, { passive: false })
-    return () => el?.removeEventListener('wheel', onWheel)
+    window.addEventListener('keydown', onKey)
+    return () => { el?.removeEventListener('wheel', onWheel); window.removeEventListener('keydown', onKey) }
   }, [])
-  const onKey = (e: KeyboardEvent) => {
-    const k = e.key.toLowerCase()
-    if (k === 'q') setRot((r) => r - 1)
-    else if (k === 'e') setRot((r) => r + 1)
-    else if (k === '+' || k === '=') zoomBy(1.2)
-    else if (k === '-' || k === '_') zoomBy(1 / 1.2)
-  }
   const label = t(d, lang, 'scene_label')
   return (
-    <div ref={box} className={selected ? 'scene picking' : 'scene'} role="group" aria-label={label} onKeyDown={onKey}>
+    <div ref={box} className={selected ? 'scene picking' : 'scene'} role="group" aria-label={label}>
       <div className="scene-bar">
         <button type="button" onClick={() => setRot((r) => r - 1)} aria-label={t(d, lang, 'rotate_left')}>⟲</button>
         <button type="button" onClick={() => setRot((r) => r + 1)} aria-label={t(d, lang, 'rotate_right')}>⟳</button>
