@@ -71,8 +71,9 @@ export function benchmark(data: GameData, budget: number) {
 /** Money efficiency = player's access ÷ benchmark access for the FULL budget (primary); the benchmark at the player's own spend is secondary. */
 export function moneyEfficiency(data: GameData, placements: Placement[], budget = data.settings.budget_eur) {
   const player = score(data, placements)
-  const full = benchmark(data, budget)
   const atSpend = benchmark(data, player.spent)
+  const greedy = benchmark(data, budget)
+  const full = atSpend.result.overall > greedy.result.overall ? atSpend : greedy // greedy is not monotonic in budget; a cheaper plan that fits is still a valid benchmark
   const ratio = (b: number) => (b > 0 ? player.overall / b : player.overall > 0 ? 1 : 0)
   return {
     player, benchmark: full, benchmarkAtSpend: atSpend,

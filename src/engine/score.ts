@@ -119,11 +119,16 @@ export function reach(plan: Plan, zone: Zone, p: Persona, memo = new Map<string,
 export function channels(plan: Plan, zone: Zone, p: Persona, memo = new Map<string, boolean>()): Map<string, number> {
   const here = (pl: Placement) => pl.at === zone.id || pl.at === ''
   const glare = !!p.attrs.glareSensitive && plan.has(LIGHTING, zone.id) // lighting hurts instead of helps
+  // A venue item that needs zone items (guided tour ← replica | touch permission) only informs zones where one of them works.
+  const localOk = (item: Item) => item.scope !== 'venue' || item.requires.every((g) => {
+    const zt = g.filter((t) => plan.items.get(t)?.scope === 'zone')
+    return !zt.length || zt.some((t) => usable(plan, t, zone.id, p, memo)) || g.some((t) => !zt.includes(t) && tokenMet(plan, t, '', p, memo, new Set()))
+  })
   const build = (skip: string) => {
     const out = new Map<string, number>()
     for (const pl of plan.placements) {
       const item = plan.items.get(pl.item)!
-      if (!here(pl) || item.id === skip || !item.channel || item.infoValue <= 0 || !usable(plan, pl.item, pl.at, p, memo)) continue
+      if (!here(pl) || item.id === skip || !item.channel || item.infoValue <= 0 || !usable(plan, pl.item, pl.at, p, memo) || !localOk(item)) continue
       let v = item.infoValue
       for (const e of plan.placements) {
         const enh = plan.items.get(e.item)!

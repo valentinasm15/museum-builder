@@ -172,4 +172,11 @@ describe('personas and situations (thin filters)', () => {
     const lp = sc([at('large_print_label', zone.id)]).zones[zone.id][P.lv].channels
     expect(lp).toEqual(expect.arrayContaining(['visual', 'visual_enhanced']))
   })
+  it('guided tour informs only rooms with a working replica or touch permission', () => {
+    const plan = [at('staff_training', ''), at('guided_touch_tour', ''), at('touch_permission')]
+    const r = sc(plan).zones
+    expect(r[Z][P.nb].channels).toContain('human')
+    const other = data.zones.find((z) => z.id !== Z)!.id
+    expect(r[other][P.nb].channels).not.toContain('human')
+  })
 })
