@@ -1,10 +1,12 @@
 import { installClickCues } from './ui/sound'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { t, useGame, type Lang } from './store'
+import A11yMenu from './ui/A11yMenu'
 import Budget from './ui/Budget'
 import Debrief from './ui/Debrief'
 import Catalogue from './ui/Catalogue'
 import Intro from './ui/Intro'
+import Menu from './ui/Menu'
 import Logo from './ui/Logo'
 import Room from './ui/Room'
 import Visit from './ui/Visit'
@@ -12,7 +14,7 @@ import Visit from './ui/Visit'
 const Scene = lazy(() => import('./scene/Scene'))
 
 export default function App() {
-  const { data: d, error, lang, setLang, phase, openMuseum, sound, setSound } = useGame()
+  const { data: d, error, lang, setLang, phase, openMuseum } = useGame()
   const [intro, setIntro] = useState(true)
   useEffect(() => {
     document.documentElement.lang = lang
@@ -35,14 +37,17 @@ export default function App() {
         <Budget d={d} />
         <nav className="hud-right">
           <button type="button" className="submit" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
-          <button type="button" onClick={() => setIntro(true)}>{t(d, lang, 'intro_help')}</button>
-          <a href="#room-h">{t(d, lang, 'room_view')}</a>
-          <button type="button" onClick={() => setSound(!sound)}>{t(d, lang, sound ? 'sound_on' : 'sound_off')}</button>
-          <div role="group" aria-label={t(d, lang, 'language')} className="lang">
-            {(['en', 'fi'] as Lang[]).map((l) => (
-              <button key={l} type="button" lang={l} aria-pressed={lang === l} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
-            ))}
-          </div>
+          <button type="button" className="icon" aria-label={t(d, lang, 'intro_help')} title={t(d, lang, 'intro_help')} onClick={() => setIntro(true)}><span aria-hidden="true" className="q">?</span></button>
+          <A11yMenu d={d} />
+          <Menu id="lang-panel" label={t(d, lang, 'language')} icon={<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><ellipse cx="12" cy="12" rx="4.2" ry="10" /><path d="M2 12h20M3.5 7h17M3.5 17h17" /></svg>}>
+            {(close) => (
+              <div className="lang">
+                {(['en', 'fi'] as Lang[]).map((l) => (
+                  <button key={l} type="button" lang={l} aria-pressed={lang === l} onClick={() => { setLang(l); close() }}>{l === 'en' ? 'English' : 'Suomi'}</button>
+                ))}
+              </div>
+            )}
+          </Menu>
         </nav>
       </header>
       <Intro d={d} open={intro} onClose={() => setIntro(false)} />
