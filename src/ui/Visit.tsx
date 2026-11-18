@@ -23,6 +23,7 @@ export default function Visit({ d }: { d: GameData }) {
 
   return (
     <dialog ref={ref} className="intro visit" aria-labelledby="visit-h" onClose={closeVisit}>
+      <button type="button" className="xbtn" aria-label={close} title={close} onClick={() => ref.current?.close()}><span aria-hidden="true">✕</span></button>
       <h2 id="visit-h">{t(d, lang, 'walkthrough')}: {name(persona)}</h2>
       <p className="note">{t(d, lang, 'intro_step', { n: String(at + 1), total: String(events.length) })}</p>
       {at > 0 && <ol>{events.slice(0, at).map((e, i) => <li key={i}>{e.text}</li>)}</ol>}
