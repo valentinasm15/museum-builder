@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { loadData, type GameData } from '../data/load'
+import * as XLSX from 'xlsx'
+import { loadData, parseWorkbook, type GameData } from '../data/load'
 import { benchmark, bundles, moneyEfficiency } from './benchmark'
 import { Plan, score, usable, type Placement, type VisitContext } from './score'
 
@@ -178,5 +179,20 @@ describe('personas and situations (thin filters)', () => {
     expect(r[Z][P.nb].channels).toContain('human')
     const other = data.zones.find((z) => z.id !== Z)!.id
     expect(r[other][P.nb].channels).not.toContain('human')
+  })
+})
+
+describe('items.moment', () => {
+  it('every venue item has before/entrance/exit and every other item has room', () => {
+    for (const i of data.items) expect(i.scope === 'venue' ? ['before', 'entrance', 'exit'] : ['room']).toContain(i.moment)
+  })
+  it('an invalid or missing moment fails with a message naming sheet and column', () => {
+    const rows = (mut: (r: Record<string, unknown>) => void) => {
+      const wb = XLSX.read(readFileSync('src/data/museum-builder-data.xlsx'))
+      const r = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.Items); r.forEach(mut)
+      wb.Sheets.Items = XLSX.utils.json_to_sheet(r); return wb
+    }
+    expect(() => parseWorkbook(rows((r) => { if (r.id === 'audio_guide_devices') r.moment = 'room' }))).toThrow(/Items.*moment/)
+    expect(() => parseWorkbook(rows((r) => { delete r.moment }))).toThrow(/sheet "Items" is missing column "moment"/)
   })
 })
