@@ -53,6 +53,7 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
     <>
       {open && rect && <div className="spot" aria-hidden="true" style={{ top: rect.top - 6, left: rect.left - 6, width: rect.width + 12, height: rect.height + 12 }} />}
       <dialog ref={ref} className={pos ? 'intro tour' : 'intro'} style={pos ?? undefined} aria-labelledby="intro-h" onClose={onClose}>
+        <button type="button" className="xbtn" aria-label={lang === 'fi' ? 'Sulje' : 'Close'} title={lang === 'fi' ? 'Sulje' : 'Close'} onClick={() => ref.current?.close()}><span aria-hidden="true">✕</span></button>
         <div aria-live="polite">
           <h2 id="intro-h">{title}</h2>
           <p>{step === 0 ? t(d, lang, 'intro_goal') : t(d, lang, `intro_${step}`)}</p>
