@@ -108,6 +108,8 @@ export function Wall({ cx, cz, len, horiz, h }: { cx: number; cz: number; len: n
 /** The visitor: a simple figure that walks along the route to each stop at a steady pace (it jumps when reduced motion is on). A red ring marks where the route breaks. */
 export function Walker({ d, path, barrier }: { d: GameData; path: [number, number][]; barrier?: [number, number] }) {
   const ref = useRef<Group>(null), s = useRef(0), placed = useRef(false)
+  const body = useRef<Group>(null), legL = useRef<Group>(null), legR = useRef<Group>(null), armL = useRef<Group>(null), armR = useRef<Group>(null)
+  const last = useRef<[number, number] | null>(null), heading = useRef(0), swing = useRef(0), phase = useRef(0)
   const pts = useMemo(() => path.map(([x, y]) => world(d, x, y)), [d, path])
   const cum = useMemo(() => pts.reduce<number[]>((a, p, i) => [...a, i ? a[i - 1] + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0], []), [pts])
   const total = cum[cum.length - 1] ?? 0
@@ -136,14 +138,50 @@ export function Walker({ d, path, barrier }: { d: GameData; path: [number, numbe
     const calm = document.documentElement.dataset.motion === 'reduce'
     if (!placed.current || calm) { s.current = total; placed.current = true } else s.current += Math.max(-4.5 * dt, Math.min(4.5 * dt, total - s.current))
     const [x, z] = pointAt(s.current), walking = Math.abs(total - s.current) > 0.01
-    g.position.set(x, walking ? Math.abs(Math.sin(state.clock.elapsedTime * 10)) * 0.1 : 0, z)
+    // Face the way they walk, swing legs and arms in opposition while walking, settle back to standing when they stop.
+    const prev = last.current
+    if (prev && walking && Math.hypot(x - prev[0], z - prev[1]) > 1e-5) heading.current = Math.atan2(x - prev[0], z - prev[1])
+    last.current = [x, z]
+    const k = Math.min(1, dt * 10)
+    swing.current += ((walking && !calm ? 1 : 0) - swing.current) * k
+    phase.current += dt * 9 * swing.current
+    const a = Math.sin(phase.current) * 0.7 * swing.current
+    g.position.set(x, Math.abs(Math.cos(phase.current)) * 0.06 * swing.current, z)
+    if (body.current) body.current.rotation.y += Math.atan2(Math.sin(heading.current - body.current.rotation.y), Math.cos(heading.current - body.current.rotation.y)) * Math.min(1, dt * 12)
+    if (legL.current && legR.current && armL.current && armR.current) { legL.current.rotation.x = a; legR.current.rotation.x = -a; armL.current.rotation.x = -a * 0.8; armR.current.rotation.x = a * 0.8 }
   })
   const [bx, bz] = barrier ? world(d, barrier[0], barrier[1]) : [0, 0]
   return (
     <>
       <group ref={ref}>
-        <mesh position={[0, 0.5, 0]} castShadow><capsuleGeometry args={[0.22, 0.5, 6, 12]} /><meshStandardMaterial color="#2b6cb0" /></mesh>
-        <mesh position={[0, 1.2, 0]} castShadow><sphereGeometry args={[0.2, 16, 16]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+        <group ref={body} scale={1.3}>
+          {/* legs and arms hang from pivots at hip and shoulder so they can swing */}
+          <group ref={legL} position={[-0.1, 0.6, 0]}>
+            <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.085, 0.38, 4, 10]} /><meshStandardMaterial color="#2f3e5c" /></mesh>
+            <mesh position={[0, -0.57, 0.05]} castShadow><boxGeometry args={[0.15, 0.08, 0.26]} /><meshStandardMaterial color="#222" /></mesh>
+          </group>
+          <group ref={legR} position={[0.1, 0.6, 0]}>
+            <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.085, 0.38, 4, 10]} /><meshStandardMaterial color="#2f3e5c" /></mesh>
+            <mesh position={[0, -0.57, 0.05]} castShadow><boxGeometry args={[0.15, 0.08, 0.26]} /><meshStandardMaterial color="#222" /></mesh>
+          </group>
+          <RoundedBox args={[0.36, 0.5, 0.2]} radius={0.08} position={[0, 0.85, 0]} castShadow><meshStandardMaterial color="#2b6cb0" /></RoundedBox>
+          <group ref={armL} position={[-0.25, 1.05, 0]}>
+            <mesh position={[0, -0.18, 0]} castShadow><capsuleGeometry args={[0.065, 0.3, 4, 10]} /><meshStandardMaterial color="#2b6cb0" /></mesh>
+            <mesh position={[0, -0.4, 0]} castShadow><sphereGeometry args={[0.06, 10, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          </group>
+          <group ref={armR} position={[0.25, 1.05, 0]}>
+            <mesh position={[0, -0.18, 0]} castShadow><capsuleGeometry args={[0.065, 0.3, 4, 10]} /><meshStandardMaterial color="#2b6cb0" /></mesh>
+            <mesh position={[0, -0.4, 0]} castShadow><sphereGeometry args={[0.06, 10, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          </group>
+          <mesh position={[0, 1.16, 0]} castShadow><cylinderGeometry args={[0.06, 0.07, 0.1, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          <mesh position={[0, 1.32, 0]} castShadow><sphereGeometry args={[0.17, 20, 20]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          {/* hair: a cap over the top and back of the head */}
+          <mesh position={[0, 1.37, -0.03]} scale={[1, 0.85, 1.02]} castShadow><sphereGeometry args={[0.19, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
+          <mesh position={[0, 1.27, -0.1]} castShadow><sphereGeometry args={[0.14, 14, 14]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
+          {/* two eyes show which way they face */}
+          <mesh position={[-0.06, 1.33, 0.155]}><sphereGeometry args={[0.02, 8, 8]} /><meshStandardMaterial color="#1a1a1a" /></mesh>
+          <mesh position={[0.06, 1.33, 0.155]}><sphereGeometry args={[0.02, 8, 8]} /><meshStandardMaterial color="#1a1a1a" /></mesh>
+        </group>
       </group>
       {barrier && (
         <group position={[bx, 0.1, bz]}>
