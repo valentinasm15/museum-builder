@@ -156,31 +156,35 @@ export function Walker({ d, path, barrier }: { d: GameData; path: [number, numbe
       <group ref={ref}>
         <group ref={body} scale={1.3}>
           {/* legs and arms hang from pivots at hip and shoulder so they can swing */}
-          <group ref={legL} position={[-0.1, 0.6, 0]}>
-            <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.085, 0.38, 4, 10]} /><meshStandardMaterial color="#2f3e5c" /></mesh>
-            <mesh position={[0, -0.57, 0.05]} castShadow><boxGeometry args={[0.15, 0.08, 0.26]} /><meshStandardMaterial color="#222" /></mesh>
+          <group ref={legL} position={[-0.085, 0.6, 0]}>
+            <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.065, 0.4, 4, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+            <mesh position={[0, -0.57, 0.04]} castShadow><boxGeometry args={[0.12, 0.07, 0.22]} /><meshStandardMaterial color="#3a2a2a" /></mesh>
           </group>
-          <group ref={legR} position={[0.1, 0.6, 0]}>
-            <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.085, 0.38, 4, 10]} /><meshStandardMaterial color="#2f3e5c" /></mesh>
-            <mesh position={[0, -0.57, 0.05]} castShadow><boxGeometry args={[0.15, 0.08, 0.26]} /><meshStandardMaterial color="#222" /></mesh>
+          <group ref={legR} position={[0.085, 0.6, 0]}>
+            <mesh position={[0, -0.28, 0]} castShadow><capsuleGeometry args={[0.065, 0.4, 4, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+            <mesh position={[0, -0.57, 0.04]} castShadow><boxGeometry args={[0.12, 0.07, 0.22]} /><meshStandardMaterial color="#3a2a2a" /></mesh>
           </group>
-          <RoundedBox args={[0.36, 0.5, 0.2]} radius={0.08} position={[0, 0.85, 0]} castShadow><meshStandardMaterial color="#2b6cb0" /></RoundedBox>
-          <group ref={armL} position={[-0.25, 1.05, 0]}>
-            <mesh position={[0, -0.18, 0]} castShadow><capsuleGeometry args={[0.065, 0.3, 4, 10]} /><meshStandardMaterial color="#2b6cb0" /></mesh>
-            <mesh position={[0, -0.4, 0]} castShadow><sphereGeometry args={[0.06, 10, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          {/* knee-length skirt and a fitted top */}
+          <mesh position={[0, 0.5, 0]} castShadow><cylinderGeometry args={[0.15, 0.27, 0.36, 20]} /><meshStandardMaterial color="#2f3e5c" /></mesh>
+          <RoundedBox args={[0.3, 0.44, 0.17]} radius={0.08} position={[0, 0.84, 0]} castShadow><meshStandardMaterial color="#b5446e" /></RoundedBox>
+          <group ref={armL} position={[-0.2, 1.03, 0]}>
+            <mesh position={[0, -0.17, 0]} castShadow><capsuleGeometry args={[0.052, 0.28, 4, 10]} /><meshStandardMaterial color="#b5446e" /></mesh>
+            <mesh position={[0, -0.37, 0]} castShadow><sphereGeometry args={[0.052, 10, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
           </group>
-          <group ref={armR} position={[0.25, 1.05, 0]}>
-            <mesh position={[0, -0.18, 0]} castShadow><capsuleGeometry args={[0.065, 0.3, 4, 10]} /><meshStandardMaterial color="#2b6cb0" /></mesh>
-            <mesh position={[0, -0.4, 0]} castShadow><sphereGeometry args={[0.06, 10, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          <group ref={armR} position={[0.2, 1.03, 0]}>
+            <mesh position={[0, -0.17, 0]} castShadow><capsuleGeometry args={[0.052, 0.28, 4, 10]} /><meshStandardMaterial color="#b5446e" /></mesh>
+            <mesh position={[0, -0.37, 0]} castShadow><sphereGeometry args={[0.052, 10, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
           </group>
-          <mesh position={[0, 1.16, 0]} castShadow><cylinderGeometry args={[0.06, 0.07, 0.1, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
-          <mesh position={[0, 1.32, 0]} castShadow><sphereGeometry args={[0.17, 20, 20]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
-          {/* hair: a cap over the top and back of the head */}
-          <mesh position={[0, 1.37, -0.03]} scale={[1, 0.85, 1.02]} castShadow><sphereGeometry args={[0.19, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
-          <mesh position={[0, 1.27, -0.1]} castShadow><sphereGeometry args={[0.14, 14, 14]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
-          {/* two eyes show which way they face */}
-          <mesh position={[-0.06, 1.33, 0.155]}><sphereGeometry args={[0.02, 8, 8]} /><meshStandardMaterial color="#1a1a1a" /></mesh>
-          <mesh position={[0.06, 1.33, 0.155]}><sphereGeometry args={[0.02, 8, 8]} /><meshStandardMaterial color="#1a1a1a" /></mesh>
+          <mesh position={[0, 1.15, 0]} castShadow><cylinderGeometry args={[0.05, 0.06, 0.1, 10]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          <mesh position={[0, 1.3, 0]} castShadow><sphereGeometry args={[0.16, 20, 20]} /><meshStandardMaterial color="#f1c9a5" /></mesh>
+          {/* long hair: a cap over the top, falling in a curtain behind the head to the shoulders, with a lock on each side */}
+          <mesh position={[0, 1.35, -0.02]} scale={[1, 0.85, 1.02]} castShadow><sphereGeometry args={[0.18, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.62]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
+          <mesh position={[0, 1.1, -0.1]} scale={[1, 1, 0.7]} castShadow><capsuleGeometry args={[0.15, 0.3, 6, 12]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
+          <mesh position={[-0.15, 1.2, -0.02]} castShadow><capsuleGeometry args={[0.04, 0.18, 4, 8]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
+          <mesh position={[0.15, 1.2, -0.02]} castShadow><capsuleGeometry args={[0.04, 0.18, 4, 8]} /><meshStandardMaterial color="#4a2f1b" /></mesh>
+          {/* two eyes show which way she faces */}
+          <mesh position={[-0.055, 1.31, 0.145]}><sphereGeometry args={[0.018, 8, 8]} /><meshStandardMaterial color="#1a1a1a" /></mesh>
+          <mesh position={[0.055, 1.31, 0.145]}><sphereGeometry args={[0.018, 8, 8]} /><meshStandardMaterial color="#1a1a1a" /></mesh>
         </group>
       </group>
       {barrier && (
