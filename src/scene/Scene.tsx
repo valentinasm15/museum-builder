@@ -1,13 +1,13 @@
 import { ContactShadows, Html, RoundedBox } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import type { GameData } from '../data/load'
+import type { GameData, Item } from '../data/load'
 import { Plan } from '../engine/score'
 import ItemInfo from '../ui/ItemInfo'
 import { inactiveMap, itemName, t, targetName, useGame } from '../store'
-import { P } from './look'
+import { lookOf, P } from './look'
 import { wallRuns } from './footprint'
-import { ItemBlock, Platform, RouteStrip, Wall, Walker, world } from './Pieces'
+import { ItemBlock, ItemRow, Platform, RouteStrip, Wall, Walker, world } from './Pieces'
 import Props from './Props'
 
 const reduced = () => document.documentElement.dataset.motion === 'reduce' // set by the Accessibility menu, which starts from the system setting
@@ -45,11 +45,17 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
       .map((id) => d.items.find((i) => i.id === id)!)
       .filter((i) => i.scope !== 'path' && i.costEur > 0) // zero-cost existing items are baseline, not objects
   const blocks = (at: string, x: number, y: number, w: number, h: number, w0: [number, number]) => {
-    const cols = Math.max(1, Math.floor((w - 0.2) / 0.9))
-    return itemsAt(at).map((it, k) => {
-      const [px, pz] = world(d, x + 0.6 + (k % cols) * 0.9, y + 0.6 + Math.floor(k / cols) * 0.9)
-      return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={() => setInspect({ item: it.id, at })} pos={[px - w0[0], 0.18, pz - w0[1]]} />
-    })
+    const cols = Math.max(1, Math.floor((w - 0.2) / 1.05)), here = itemsAt(at)
+    const open = (it: Item) => () => setInspect({ item: it.id, at })
+    return (
+      <>
+        {here.map((it, k) => {
+          const [px, pz] = world(d, x + 0.6 + (k % cols) * 1.05, y + 0.6 + Math.floor(k / cols) * 1.05)
+          return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
+        })}
+        <ItemRow y={[1.3, -h / 2 - 0.3]} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
+      </>
+    )
   }
   const a = Math.PI / 4 + rot * (Math.PI / 2)
   const near = (nx: number, nz: number) => nx * Math.sin(a) + nz * Math.cos(a) > 0.01

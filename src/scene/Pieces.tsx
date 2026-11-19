@@ -10,6 +10,22 @@ export const world = (d: GameData, x: number, y: number): [number, number] => [x
 
 const HEIGHT: Record<Shape, number> = { box: 0.5, cyl: 0.5, slab: 0.22, panel: 0.6, cone: 0.6 }
 
+/** The symbols of a room's items as one row of real buttons above the room: they never overlap each other or the room name, and keyboard users can reach them. */
+export function ItemRow({ y, items }: { y: [number, number]; items: { id: string; glyph: string; active: boolean; label: string; onInspect: () => void }[] }) {
+  if (!items.length) return null
+  return (
+    <Html position={[0, y[0], y[1]]} center zIndexRange={[40, 30]}>
+      <div className="itemrow">
+        {items.map((i) => (
+          <button key={i.id} type="button" className={i.active ? 'glyph' : 'glyph warn'} aria-label={i.label} title={i.label} onClick={(e) => { e.stopPropagation(); i.onInspect() }}>
+            <span aria-hidden="true">{i.active ? i.glyph : `⚠ ${i.glyph}`}</span>
+          </button>
+        ))}
+      </div>
+    </Html>
+  )
+}
+
 /** A placed item on the map. Click it to read what it needs (the card lives outside the scene). */
 export function ItemBlock({ item, pos, active, inspected, onInspect }: { item: Item; pos: [number, number, number]; active: boolean; inspected: boolean; onInspect: () => void }) {
   const look = lookOf(item)
@@ -24,9 +40,6 @@ export function ItemBlock({ item, pos, active, inspected, onInspect }: { item: I
         {look.shape === 'panel' && <RoundedBox args={[0.55, h, 0.12]} radius={0.04} castShadow>{mat}{!active && <Edges color="#6b6458" />}</RoundedBox>}
         {look.shape === 'box' && <RoundedBox args={[0.5, h, 0.5]} radius={0.08} castShadow>{mat}{!active && <Edges color="#6b6458" />}</RoundedBox>}
       </group>
-      <Html position={[0, h + 0.3, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
-        <span aria-hidden="true" className={active ? 'glyph' : 'glyph warn'}>{active ? look.glyph : `⚠ ${look.glyph}`}</span>
-      </Html>
     </group>
   )
 }
@@ -45,7 +58,7 @@ export function Platform({ d, x, y, w, h, label, num, hint, mark, selected, targ
         <meshStandardMaterial color={P.wood} roughness={0.8} />
       </RoundedBox>
       {children}
-      <Html position={[w / 2 - 0.55, 0.9, h / 2 - 0.55]} center zIndexRange={[10, 0]}> {/* corner away from the items, which start top-left */}
+      <Html position={[w / 2 - 0.2, 0.9, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
         <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button>
       </Html>
     </group>
