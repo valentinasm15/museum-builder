@@ -7,24 +7,28 @@ import Debrief from './ui/Debrief'
 import Catalogue from './ui/Catalogue'
 import Intro from './ui/Intro'
 import Menu from './ui/Menu'
+import Loader from './ui/Loader'
 import Logo from './ui/Logo'
 import Room from './ui/Room'
 import Visit from './ui/Visit'
 
-const Scene = lazy(() => import('./scene/Scene'))
+const sceneChunk = import('./scene/Scene') // start fetching the 3D code at once, so the loader covers it too
+const Scene = lazy(() => sceneChunk)
 
 export default function App() {
   const { data: d, error, lang, setLang, phase, openMuseum } = useGame()
   const [intro, setIntro] = useState(true)
+  const [sceneReady, setSceneReady] = useState(false), [loaded, setLoaded] = useState(false)
+  useEffect(() => { sceneChunk.then(() => setSceneReady(true), () => setSceneReady(true)) }, [])
   useEffect(() => {
     document.documentElement.lang = lang
     if (d) document.title = t(d, lang, 'app_title')
   }, [d, lang])
   useEffect(() => installClickCues(() => useGame.getState().sound), [])
 
-  // Before the workbook loads there are no Texts yet, so these two screens show the loader's own message.
+  // Before the workbook loads there are no Texts yet, so the loading screen has no text of its own beyond a hidden status.
   if (error) return <main id="main"><h1>Museum Builder</h1><p role="alert" className="bad">{error}</p></main>
-  if (!d) return <main id="main" aria-busy="true"><h1>Museum Builder</h1></main>
+  if (!d || !loaded) return <Loader done={!!d && sceneReady} onFinished={() => setLoaded(true)} />
 
   return (
     <>
