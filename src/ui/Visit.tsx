@@ -52,6 +52,7 @@ export default function Visit({ d }: { d: GameData }) {
       <p className="note">{word(lang, 'stop', { n: i + 1, total: list.length })} · <label>{word(lang, 'visitor')}:{' '}
         <select value={persona.id} onChange={(e) => setWalk({ pid: e.target.value, i: 0 })}>{d.personas.map((p) => <option key={p.id} value={p.id}>{pname(p)}</option>)}</select>
       </label></p>
+      <div className="walk-body">
       <div role="status" aria-live="polite">
         <h2 id="walk-h"><span aria-hidden="true">{ICON[s.status]}</span> {s.name} {s.kind !== 'exit' && <span className="st">· {word(lang, s.status)}</span>}</h2>
         {s.notes.length > 0 && <><h3>{word(lang, 'across')}</h3><ul>{s.notes.map((n, k) => <li key={k}>{n}</li>)}</ul></>}
@@ -62,8 +63,9 @@ export default function Visit({ d }: { d: GameData }) {
         {s.fails.length > 3 && <details><summary>{word(lang, 'more')}</summary><ul className="no">{s.fails.slice(3).map((f, k) => <li key={k}>✕ {f.text}{f.fix && <strong className="fix"> → {f.fix.text}</strong>}</li>)}</ul></details>}</>}
       </div>
       {s.kind === 'exit' && <><h3>{word(lang, 'next')}</h3><p role="status">{buy ?? t(d, lang, 'loading')}</p><p className="note">{local(lang, 'roomsLegend')}</p></>}
+      </div>
       <div className="intro-nav">
-        {i < last && <button type="button" className="link" onClick={() => setWalk({ i: last })}>{t(d, lang, 'walk_skip')}</button>}
+        <button type="button" className="link" onClick={() => setWalk({ i: last })} style={i >= last ? { visibility: 'hidden' } : undefined} tabIndex={i >= last ? -1 : 0} aria-hidden={i >= last}>{t(d, lang, 'walk_skip')}</button>
         <button type="button" onClick={() => setWalk({ i: i - 1 })} disabled={i === 0}>{t(d, lang, 'walk_prev')}</button>
         {i < last ? <button type="button" onClick={() => setWalk({ i: i + 1 })} ref={next}>{t(d, lang, 'walk_next')}</button>
           : <button type="button" onClick={openDebrief} ref={next}>{word(lang, 'summary')}</button>}
