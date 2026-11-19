@@ -26,10 +26,11 @@ export default function Visit({ d }: { d: GameData }) {
   // Tell the scene where the visitor stands and what has been seen so far.
   useEffect(() => {
     const entrance: [number, number] = [d.settings.entrance_x, d.settings.entrance_y]
-    const end = (path: string[]): [number, number] => { const g = d.route.find((r) => r.id === path[path.length - 1]); return g ? [g.x2, g.y2] : entrance }
+    // Polyline from the entrance along the route segments to where the visitor ends up at this stop.
+    const walked = (ids: string[]): [number, number][] => [entrance, ...ids.map((id) => d.route.find((r) => r.id === id)).filter((g) => !!g).map((g) => [g!.x2, g!.y2] as [number, number])]
     const cut = s.kind === 'room' && s.breakAt && (s.status === 'none' || s.status === 'partial') ? d.route.find((r) => r.id === s.breakAt) : undefined
     const marks = Object.fromEntries(list.slice(0, i + 1).filter((x) => x.zoneId).map((x) => [x.zoneId!, { icon: ICON[x.status], text: word(lang, x.status) }]))
-    setWalkView({ at: cut ? [cut.x1, cut.y1] : s.kind === 'room' ? end(s.path) : entrance, barrier: cut ? [cut.x1, cut.y1] : undefined, marks })
+    setWalkView({ path: s.kind !== 'room' ? [entrance] : walked(cut ? s.path.slice(0, s.path.indexOf(cut.id)) : s.path), barrier: cut ? [cut.x1, cut.y1] : undefined, marks })
     setFocus(s.zoneId ?? null)
   }, [d, list, i, s, lang, setWalkView, setFocus])
   useEffect(() => () => { setWalkView(null); setFocus(null) }, [setWalkView, setFocus])

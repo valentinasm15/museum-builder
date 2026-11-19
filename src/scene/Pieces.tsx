@@ -1,6 +1,6 @@
 import { Edges, Html, RoundedBox } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import type { Group } from 'three'
 import type { GameData, Item, Segment } from '../data/load'
 import { lookOf, P, type Shape } from './look'
@@ -91,16 +91,38 @@ export function Wall({ cx, cz, len, horiz, h }: { cx: number; cz: number; len: n
   )
 }
 
-/** The visitor (a simple figure that walks to each stop) and, where the route breaks, a red ring. Motion is skipped when reduced motion is on. */
-export function Walker({ d, at, barrier }: { d: GameData; at: [number, number]; barrier?: [number, number] }) {
-  const ref = useRef<Group>(null), placed = useRef(false)
-  const [tx, tz] = world(d, at[0], at[1])
-  useFrame((_, dt) => {
+/** The visitor: a simple figure that walks along the route to each stop at a steady pace (it jumps when reduced motion is on). A red ring marks where the route breaks. */
+export function Walker({ d, path, barrier }: { d: GameData; path: [number, number][]; barrier?: [number, number] }) {
+  const ref = useRef<Group>(null), s = useRef(0), placed = useRef(false)
+  const pts = useMemo(() => path.map(([x, y]) => world(d, x, y)), [d, path])
+  const cum = useMemo(() => pts.reduce<number[]>((a, p, i) => [...a, i ? a[i - 1] + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0], []), [pts])
+  const total = cum[cum.length - 1] ?? 0
+  const pointAt = (dist: number): [number, number] => {
+    for (let i = 1; i < pts.length; i++) if (dist <= cum[i] || i === pts.length - 1) {
+      const t = cum[i] > cum[i - 1] ? Math.min(1, Math.max(0, (dist - cum[i - 1]) / (cum[i] - cum[i - 1]))) : 1
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]
+    }
+    return pts[0]
+  }
+  // New stop = new route: keep the visitor where they stand by finding the nearest point on it, then walk from there.
+  useEffect(() => {
     const g = ref.current
-    if (!g) return
-    if (!placed.current || document.documentElement.dataset.motion === 'reduce') { g.position.set(tx, 0, tz); placed.current = true; return }
-    const k = Math.min(1, dt * 3)
-    g.position.x += (tx - g.position.x) * k; g.position.z += (tz - g.position.z) * k
+    if (!g || !placed.current) { s.current = 0; return }
+    let best = Infinity
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], len = cum[i] - cum[i - 1] || 1
+      const t = Math.min(1, Math.max(0, ((g.position.x - ax) * (bx - ax) + (g.position.z - az) * (bz - az)) / (len * len)))
+      const dd = Math.hypot(g.position.x - (ax + (bx - ax) * t), g.position.z - (az + (bz - az) * t))
+      if (dd < best) { best = dd; s.current = cum[i - 1] + t * len }
+    }
+  }, [pts, cum])
+  useFrame((state, dt) => {
+    const g = ref.current
+    if (!g || !pts.length) return
+    const calm = document.documentElement.dataset.motion === 'reduce'
+    if (!placed.current || calm) { s.current = total; placed.current = true } else s.current += Math.max(-4.5 * dt, Math.min(4.5 * dt, total - s.current))
+    const [x, z] = pointAt(s.current), walking = Math.abs(total - s.current) > 0.01
+    g.position.set(x, walking ? Math.abs(Math.sin(state.clock.elapsedTime * 10)) * 0.1 : 0, z)
   })
   const [bx, bz] = barrier ? world(d, barrier[0], barrier[1]) : [0, 0]
   return (

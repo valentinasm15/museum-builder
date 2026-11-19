@@ -5,8 +5,8 @@ import { Plan, score, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
 export type Phase = 'planning' | 'visiting' | 'debrief'
-/** What the scene shows during the walkthrough: where the visitor stands (grid tile), the break in the route, and a mark per room already visited. */
-export interface WalkView { at: [number, number]; barrier?: [number, number]; marks: Record<string, { icon: string; text: string }> }
+/** What the scene shows during the walkthrough: the route the visitor walks to where they stand (grid tiles), the break in the route, and a mark per room already visited. */
+export interface WalkView { path: [number, number][]; barrier?: [number, number]; marks: Record<string, { icon: string; text: string }> }
 
 interface State {
   data: GameData | null; base: GameData | null; level: string; error: string | null; lang: Lang

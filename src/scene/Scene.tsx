@@ -104,7 +104,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           {blocks(z.id, z.x, z.y, z.w, z.h, world(d, z.x + z.w / 2, z.y + z.h / 2))}
         </Platform>
       ))}
-      {wv && <Walker d={d} at={wv.at} barrier={wv.barrier} />}
+      {wv && <Walker d={d} path={wv.path} barrier={wv.barrier} />}
       <Platform num="⌂" d={d} x={vx} y={vy} w={vw} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
         label={t(d, lang, 'whole_museum')}>
         {blocks('', vx, vy, vw, vh, [vcx, vcz])}
