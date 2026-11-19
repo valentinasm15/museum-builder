@@ -13,27 +13,33 @@ const Box = ({ s, p, c, o }: { s: [number, number, number]; p: [number, number, 
   <RoundedBox args={s} radius={0.04} position={p} castShadow receiveShadow><Mat c={c} o={o} /></RoundedBox>
 )
 
-function Prop({ f }: { f: Feature }) {
+/** Rotation that puts a display's back against the wall: the side whose neighbour tile is outside every floor rectangle. */
+function wallTurn(d: GameData, f: Feature) {
+  const inside = (x: number, y: number) => d.floor.some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)
+  if (f.w >= f.h) return inside(f.x + f.w / 2, f.y - 0.5) ? Math.PI : 0 // north wall : south wall
+  return inside(f.x - 0.5, f.y + f.h / 2) ? -Math.PI / 2 : Math.PI / 2 // west wall : east wall
+}
+
+function Prop({ f, turn }: { f: Feature; turn: number }) {
   const { w, h } = f
   switch (f.kind) {
     case 'display': {
-      // Glass display wall: teal back panel on the north/west side, coral and birch plinth fronts, small exhibits on top.
-      const along = w >= h ? 'x' : 'z', n = Math.max(1, Math.round(Math.max(w, h)))
-      const len = Math.max(w, h)
+      // Glass display wall; the back panel sits against the wall (the side with no floor behind it), plinth fronts face the room.
+      const len = Math.max(w, h), depth = Math.min(w, h), n = Math.max(1, Math.round(len))
+      const at = (o: number, y: number): [number, number, number] => [o, y, depth * 0.05]
       return (
-        <>
-          <Box s={along === 'x' ? [len, 1.8, 0.1] : [0.1, 1.8, len]} p={along === 'x' ? [0, 0.9, -h / 2 + 0.05] : [-w / 2 + 0.05, 0.9, 0]} c={C.back} />
+        <group rotation-y={turn}>
+          <Box s={[len, 1.8, 0.1]} p={[0, 0.9, -depth / 2 + 0.05]} c={C.back} />
           {Array.from({ length: n }, (_, i) => {
             const o = -len / 2 + (i + 0.5) * (len / n)
-            const at = (y: number): [number, number, number] => (along === 'x' ? [o, y, 0.05] : [0.05, y, o])
             return (
               <group key={i}>
-                <Box s={along === 'x' ? [len / n - 0.04, 0.6, h * 0.8] : [w * 0.8, 0.6, len / n - 0.04]} p={at(0.3)} c={i % 2 ? C.birch : C.coral} />
-                <Box s={[0.4, 0.22 + (i % 3) * 0.12, 0.35]} p={at(0.72 + (i % 3) * 0.06)} c={C.thing[i % 4]} />
+                <Box s={[len / n - 0.04, 0.6, depth * 0.8]} p={at(o, 0.3)} c={i % 2 ? C.birch : C.coral} />
+                <Box s={[0.4, 0.22 + (i % 3) * 0.12, 0.35]} p={at(o, 0.72 + (i % 3) * 0.06)} c={C.thing[i % 4]} />
               </group>
             )
           })}
-        </>
+        </group>
       )
     }
     case 'column':
@@ -93,7 +99,8 @@ function Prop({ f }: { f: Feature }) {
   }
 }
 
-const LABELLED = ['lift', 'stairs', 'wc', 'exit', 'feedback']
+// Symbols, not titles, for the building's fixed parts: the map stays about the exhibition. The name is the tooltip.
+const SYMBOL: Partial<Record<Feature['kind'], string>> = { lift: '🛗', stairs: '🪜', wc: '🚻', exit: '🚪', feedback: '💬' }
 
 /** Fixed parts of the real building (lift, stairs, exits, toilets, feedback point, exhibit walls). Names come from the Features sheet. */
 export default function Props({ d, lang }: { d: GameData; lang: Lang }) {
@@ -103,10 +110,10 @@ export default function Props({ d, lang }: { d: GameData; lang: Lang }) {
         const [x, z] = world(d, f.x + f.w / 2, f.y + f.h / 2)
         return (
           <group key={f.id} position={[x, 0, z]}>
-            <Prop f={f} />
-            {LABELLED.includes(f.kind) && (
+            <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
+            {SYMBOL[f.kind] && (
               <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
-                <span className="elabel small">{(lang === 'fi' && f.nameFi) || f.nameEn}</span>
+                <span className="elabel small" title={(lang === 'fi' && f.nameFi) || f.nameEn} aria-hidden="true">{SYMBOL[f.kind]}</span>
               </Html>
             )}
           </group>

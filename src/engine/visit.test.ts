@@ -55,7 +55,7 @@ it('rooms found only through the floor plan are counted as partly experienced, n
   const ps = [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: back.id }]
   const ev = visit(d, ps, noPhone, { hasMuseumDevice: true })
   expect(ev[ev.length - 1].key).toBe('walk_end_partial')
-  expect(ev[ev.length - 1].text).toMatch(/only partly/)
+  expect(ev[ev.length - 1].text).toMatch(/without a guiding route/)
 })
 
 const routeCost = d.items.find((i) => i.scope === 'path')!.costEur
@@ -102,4 +102,23 @@ it('stops: an item the visitor cannot use is named as not for them', () => {
   const lowv = d.personas.find((p) => !p.attrs.readsBraille)!
   const room = stops(d, [P('braille_label', near.id)], lowv).find((x) => x.zoneId === near.id)!
   expect(room.fails.some((f) => /does not help this visitor/.test(f.text))).toBe(true)
+})
+
+it('stops: the last stop is always the whole museum, with notes about the whole visit and no deficit wording', () => {
+  for (const lang of ['en', 'fi'] as const) {
+    const s = stops(d, [], noPhone, {}, lang), end = s[s.length - 1]
+    expect(end.kind).toBe('exit')
+    expect(end.name).toBe(lang === 'fi' ? 'Koko museo' : 'Whole museum')
+    expect(end.notes.length).toBeGreaterThan(0)
+    expect(end.notes.join(' ')).not.toMatch(/[{}]|undefined|NaN/)
+  }
+  const all = stops(d, [], noPhone).flatMap((x) => [...x.works.map((w) => w.text), ...x.fails.map((f) => f.text), ...x.notes]).join(' ')
+  expect(all).not.toMatch(/cannot find it alone|Cannot reach/i)
+})
+
+it('a visitor who needs a continuous route gets the stronger wording; others get the independence wording', () => {
+  const need = d.personas.find((p) => p.attrs.needsContinuousRoute)!
+  const room = (p: typeof need) => stops(d, [], p).find((x) => x.zoneId === back.id)!.fails[0].text
+  expect(room(need)).toMatch(/continuous guiding route/)
+  expect(room(noPhone)).toMatch(/more effort and less independence/)
 })

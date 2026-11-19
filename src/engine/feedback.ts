@@ -2,7 +2,7 @@ import type { GameData, Persona } from '../data/load'
 import { budget, itemName, money, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
 import { bundles, candidates, marginalContributions, type moneyEfficiency } from './benchmark'
 import { Plan, score, type Placement, type VisitContext } from './score'
-import { stops, visit as walk } from './visit'
+import { museumGap, stops, visit as walk } from './visit'
 
 export type Band = 'partial' | 'good' | 'strong'
 /** Band edges come from the Scoring sheet (band_good, band_strong) when present; the defaults are an assumption to validate. */
@@ -32,13 +32,12 @@ const LOCAL = {
   titleC: { en: 'C. Your money', fi: 'C. Rahasi' },
   titleD: { en: 'D. Next step', fi: 'D. Seuraava askel' },
   verdict: { en: 'Your plan works for {n} of {total} visitor types.', fi: 'Suunnitelmasi toimii {n}/{total} kävijätyypille.' },
-  gapOne: { en: 'Biggest gap: {name} reached {k} of {n} rooms.', fi: 'Suurin aukko: {name} pääsi {k}/{n} huoneeseen.' },
-  gapMany: { en: 'Biggest gap: {c} visitor types reached no room at all.', fi: 'Suurin aukko: {c} kävijätyyppiä ei päässyt yhteenkään huoneeseen.' },
+  gapLead: { en: 'Biggest gap:', fi: 'Suurin aukko:' },
   spentOf: { en: 'Spent {spent} of {budget}', fi: 'Käytetty {spent} / {budget}' },
-  roomsLegend: { en: 'Full = reached with something to use · Partly = found only via the floor plan · Empty = reached, nothing to use · None = cannot reach', fi: 'Täysi = perillä ja käytettävää · Osittain = löytyi vain kartasta · Tyhjä = perillä, ei käytettävää · Ei = ei pääse' },
-  st_full: { en: 'Full', fi: 'Täysi' }, st_partial: { en: 'Partly', fi: 'Osittain' }, st_empty: { en: 'Empty', fi: 'Tyhjä' }, st_none: { en: 'None', fi: 'Ei' },
+  roomsLegend: { en: 'Guided = a route leads here and there is something to experience · With effort = found from the floor plan, no guiding route · Empty = reached, nothing to experience · Not guided = nothing leads here', fi: 'Opastettu = opaslinja johtaa tänne ja on koettavaa · Vaivalla = löytyy kartalta, ei opaslinjaa · Tyhjä = perillä, ei koettavaa · Ei opastusta = mikään ei johda tänne' },
+  st_full: { en: 'Guided', fi: 'Opastettu' }, st_partial: { en: 'With effort', fi: 'Vaivalla' }, st_empty: { en: 'Empty', fi: 'Tyhjä' }, st_none: { en: 'Not guided', fi: 'Ei opastusta' },
   worked: { en: 'What worked: {rooms}.', fi: 'Toimi: {rooms}.' },
-  needRoute: { en: "Needs a tactile route: {rooms} ({cost}).", fi: 'Tarvitsee opaslinjan: {rooms} ({cost}).' },
+  needRoute: { en: 'A tactile route to {rooms} ({cost}) would make the visit easier and more independent.', fi: 'Opaslinja huoneisiin {rooms} ({cost}) tekisi vierailusta helpomman ja itsenäisemmän.' },
   emptyRooms: { en: 'Reached, but nothing this visitor can use: {rooms}.', fi: 'Perillä, mutta ei käytettävää tälle kävijälle: {rooms}.' },
   showWalk: { en: 'Show the full walkthrough', fi: 'Näytä koko kierros' },
   colType: { en: 'Visitor type', fi: 'Kävijätyyppi' }, colShare: { en: 'Share', fi: 'Osuus' }, colResult: { en: 'Result', fi: 'Tulos' }, colRooms: { en: 'Rooms', fi: 'Huoneet' },
@@ -155,16 +154,14 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
   const idleKeys = new Set(idle.map((i) => i.key))
   const roomsOf = (p: Persona) => d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length
   const others = d.personas.map((p) => ({ id: p.id, name: nameOf(p, lang), share: p.visitorShare, band: band(d, std.personas[p.id]), rooms: roomsOf(p), total: d.zones.length }))
-  const zero = others.filter((o) => o.rooms === 0), weakest = [...others].sort((a, b) => a.rooms - b.rooms)[0]
-  const gap = zero.length > 1 ? local(lang, 'gapMany', { c: zero.length })
-    : weakest && weakest.rooms < weakest.total ? local(lang, 'gapOne', { name: weakest.name, k: weakest.rooms, n: weakest.total }) : ''
+  const gap = museumGap(d, placements, lang)
   const inactiveTotal = std.inactive.filter((x) => placements.some((p) => p.item === x.placement.item && p.at === x.placement.at)).reduce((a, x) => a + single(x.placement), 0)
   return {
     band: band(d, std.overall),
     focal: { persona: names.persona, situation: names.situation, band: band(d, day.personas[persona.id] ?? 0),
       skipped: events.filter((e) => e.key === 'not_reachable').map((e) => e.text), end: events[events.length - 1].text,
       rooms, gaps, walk: events.map((e) => e.text) },
-    verdict: { works: others.filter((o) => o.band !== 'partial').length, total: others.length, gap },
+    verdict: { works: others.filter((o) => o.band !== 'partial').length, total: others.length, gap: gap ? `${local(lang, 'gapLead')} ${gap}` : '' },
     others,
     dims: {
       reach: band(d, weighted(d, (p, z) => zr(p, z).reach)),

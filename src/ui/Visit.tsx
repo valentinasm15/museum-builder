@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameData } from '../data/load'
+import { local, nextStep } from '../engine/feedback'
 import { stops, type StopStatus } from '../engine/visit'
 import { itemName, t, useGame, visitCtx, type Lang } from '../store'
 
@@ -8,8 +9,9 @@ const L = {
   works: { en: 'Works', fi: 'Toimii' }, fails: { en: 'Does not work', fi: 'Ei toimi' },
   via: { en: 'thanks to {items} at the entrance', fi: '{items} sisäänkäynnillä' }, more: { en: 'More', fi: 'Lisää' },
   visitor: { en: 'Visitor', fi: 'Kävijä' }, summary: { en: 'See the summary', fi: 'Näytä yhteenveto' }, stop: { en: 'Stop {n} of {total}', fi: 'Pysäkki {n}/{total}' },
-  full: { en: 'Reached, something to use', fi: 'Perillä, käytettävää' }, partial: { en: 'Only partly', fi: 'Vain osittain' },
-  empty: { en: 'Reached, nothing to use', fi: 'Perillä, ei käytettävää' }, none: { en: 'Cannot reach', fi: 'Ei pääse perille' },
+  full: { en: 'Guided, something to experience', fi: 'Opastettu, koettavaa' }, partial: { en: 'With effort, no guiding route', fi: 'Vaivalla, ei opaslinjaa' },
+  empty: { en: 'Reached, nothing to experience', fi: 'Perillä, ei koettavaa' }, none: { en: 'Nothing leads here', fi: 'Mikään ei johda tänne' },
+  across: { en: 'Across the museum', fi: 'Koko museossa' }, next: { en: 'Next step', fi: 'Seuraava askel' },
   ok: { en: 'Works', fi: 'Toimii' }, mixed: { en: 'Partly works', fi: 'Toimii osittain' }, idle: { en: 'Not working yet', fi: 'Ei vielä toimi' },
 }
 const word = (lang: Lang, k: keyof typeof L, v: Record<string, string | number> = {}) => L[k][lang].replace(/\{(\w+)\}/g, (m, n) => (n in v ? String(v[n]) : m))
@@ -22,6 +24,12 @@ export default function Visit({ d }: { d: GameData }) {
   const pname = (p: typeof persona) => (lang === 'fi' && p.nameFi) || p.name
   const list = useMemo(() => stops(d, placements, persona, visitCtx(d, v), lang), [d, placements, persona, v, lang])
   const last = list.length - 1, i = Math.min(walk.i, last), s = list[i]
+  const [buy, setBuy] = useState<string | null>(null)
+  useEffect(() => { // slow (it tries every purchase), so only at the last stop and off the render
+    if (s.kind !== 'exit') return
+    const id = setTimeout(() => setBuy(nextStep(d, lang, placements)), 30)
+    return () => clearTimeout(id)
+  }, [s.kind, d, lang, placements])
 
   // Tell the scene where the visitor stands and what has been seen so far.
   useEffect(() => {
@@ -45,13 +53,15 @@ export default function Visit({ d }: { d: GameData }) {
         <select value={persona.id} onChange={(e) => setWalk({ pid: e.target.value, i: 0 })}>{d.personas.map((p) => <option key={p.id} value={p.id}>{pname(p)}</option>)}</select>
       </label></p>
       <div role="status" aria-live="polite">
-        <h2 id="walk-h"><span aria-hidden="true">{ICON[s.status]}</span> {s.name} <span className="st">· {word(lang, s.status)}</span></h2>
+        <h2 id="walk-h"><span aria-hidden="true">{ICON[s.status]}</span> {s.name} {s.kind !== 'exit' && <span className="st">· {word(lang, s.status)}</span>}</h2>
+        {s.notes.length > 0 && <><h3>{word(lang, 'across')}</h3><ul>{s.notes.map((n, k) => <li key={k}>{n}</li>)}</ul></>}
         {s.works.length > 0 && <><h3>{word(lang, 'works')}</h3><ul className="ok">{s.works.map((w, k) => <li key={k}>✓ {w.text}{w.via?.length ? <span className="note"> ({word(lang, 'via', { items: names(w.via) })})</span> : null}</li>)}</ul></>}
         {s.fails.length > 0 && <><h3>{word(lang, 'fails')}</h3><ul className="no">
           {s.fails.slice(0, 3).map((f, k) => <li key={k}>✕ {f.text}{f.fix && <strong className="fix"> → {f.fix.text}</strong>}</li>)}
         </ul>
         {s.fails.length > 3 && <details><summary>{word(lang, 'more')}</summary><ul className="no">{s.fails.slice(3).map((f, k) => <li key={k}>✕ {f.text}{f.fix && <strong className="fix"> → {f.fix.text}</strong>}</li>)}</ul></details>}</>}
       </div>
+      {s.kind === 'exit' && <><h3>{word(lang, 'next')}</h3><p role="status">{buy ?? t(d, lang, 'loading')}</p><p className="note">{local(lang, 'roomsLegend')}</p></>}
       <div className="intro-nav">
         {i < last && <button type="button" className="link" onClick={() => setWalk({ i: last })}>{t(d, lang, 'walk_skip')}</button>}
         <button type="button" onClick={() => setWalk({ i: i - 1 })} disabled={i === 0}>{t(d, lang, 'walk_prev')}</button>

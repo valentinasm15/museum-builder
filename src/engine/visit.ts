@@ -32,7 +32,7 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
       : !persona.attrs.needsContinuousRoute && ctx.staffAvailable !== false && grants('staff_guided') ? 'staff'
       : grants('plan_only') ? 'plan' : ''
     if (!how) { say('not_reachable', {}, z.id); ev[ev.length - 1].text = `${zn}: ${ev[ev.length - 1].text}`; inactive((a) => a === z.id, z.id); continue }
-    say(`walk_reach_${how}`, { zone: zn }, z.id)
+    say(how === 'plan' && persona.attrs.needsContinuousRoute ? 'walk_reach_plan_need' : `walk_reach_${how}`, { zone: zn }, z.id)
     const r = zoneScore(plan, z, persona, memo)
     const chans = r.channels.filter((c) => d.texts[`ch_${c}`]).map((c) => t(d, lang, `ch_${c}`))
     if (!chans.length) say('walk_no_info', { zone: zn, exhibits: cap(z.exhibits.join(', ') || unnamed(zn, lang)) }, z.id)
@@ -58,6 +58,7 @@ export interface Stop {
   id: string; kind: Moment; zoneId?: string; name: string; status: StopStatus
   works: StopLine[]; fails: StopLine[]
   path: string[] // route segments walked to get here (rooms only)
+  notes: string[] // plain lines about the whole visit (the final stop)
   breakAt?: string // first segment of that path that does not exist yet
 }
 
@@ -68,7 +69,11 @@ const S = {
   notForThem: { en: '{item} does not help this visitor (it is for: {who}).', fi: '{item} ei auta tätä kävijää (se on tarkoitettu: {who}).' },
   notToday: { en: "{item} is not available in today's conditions.", fi: '{item} ei ole käytettävissä tämän päivän olosuhteissa.' },
   waiting: { en: '{item} is waiting: nothing you placed uses it yet (it carries {needs}).', fi: '{item} odottaa: mikään sijoittamasi ei käytä sitä vielä (se tarvitsee: {needs}).' },
-  fixRoute: { en: 'Continue the tactile route to here: {cost}.', fi: 'Jatka opaslinjaa tänne: {cost}.' },
+  fixRoute: { en: 'A tactile route to here ({cost}): easier to navigate, more independent.', fi: 'Opaslinja tänne ({cost}): helpompi liikkua, enemmän itsenäisyyttä.' },
+  museum: { en: 'Whole museum', fi: 'Koko museo' },
+  gapOne: { en: '{name} found something to experience in only {k} of {n} rooms.', fi: '{name} löysi koettavaa vain {k}/{n} huoneesta.' },
+  gapMany: { en: '{c} visitor types found nothing to experience in any room.', fi: '{c} kävijätyyppiä ei löytänyt koettavaa yhdestäkään huoneesta.' },
+  oneWay: { en: 'In {k} of {n} rooms there is only one way to take in the exhibits.', fi: '{k}/{n} huoneessa näyttelyn voi kokea vain yhdellä tavalla.' },
   fixAdd: { en: 'Add {what} ({cost}) so this visitor can take it in.', fi: 'Lisää {what} ({cost}), niin kävijä voi kokea sen.' },
 }
 const sx = (lang: Lang, k: keyof typeof S, v: Record<string, string | number> = {}) =>
@@ -104,13 +109,14 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
   }
   function venueStop(m: Moment & ('before' | 'entrance' | 'exit'), here: Placement[]): Stop {
     const r = here.map(verdict), works = r.filter((x) => x.ok).map((x) => x.line), fails = r.filter((x) => !x.ok).map((x) => x.line)
-    return { id: m, kind: m, name: sx(lang, m), status: !fails.length ? 'ok' : works.length ? 'mixed' : 'idle', works, fails, path: [] }
+    return { id: m, kind: m, name: sx(lang, m), status: !fails.length ? 'ok' : works.length ? 'mixed' : 'idle', works, fails, path: [], notes: [] }
   }
 
+  let oneWay = 0
   d.zones.forEach((z) => {
     const keys = events.filter((e) => e.zoneId === z.id).map((e) => e.key)
     const noInfo = keys.includes('walk_no_info') // reach decides the status; "nothing to use" is added on top
-    const status: StopStatus = keys.includes('not_reachable') ? 'none' : keys.includes('walk_reach_plan') ? 'partial' : noInfo ? 'empty' : 'full'
+    const status: StopStatus = keys.includes('not_reachable') ? 'none' : keys.some((k) => k.startsWith('walk_reach_plan')) ? 'partial' : noInfo ? 'empty' : 'full'
     const path = plan.chain(z.routeSegment), breakAt = path.find((s) => !plan.segmentExists(s))
     const r = zoneScore(plan, z, persona, memo)
     const mine = plan.placements.filter((p) => p.at === z.id && plan.items.get(p.item)?.moment === 'room')
@@ -125,7 +131,7 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
       ? { text: sx(lang, 'fixRoute', { cost: money(lang, missing.length * route.costEur) }), cost: missing.length * route.costEur, items: missing.map((s) => ({ item: route.id, at: s })) } : undefined
     const zn = targetName(d, lang, z.id)
     if (status === 'none') fails.push({ text: `${zn}: ${t(d, lang, 'not_reachable')}`, fix: routeFix })
-    else if (status === 'partial') fails.push({ text: t(d, lang, 'walk_reach_plan', { zone: zn }), fix: routeFix })
+    else if (status === 'partial') fails.push({ text: t(d, lang, persona.attrs.needsContinuousRoute ? 'walk_reach_plan_need' : 'walk_reach_plan', { zone: zn }), fix: routeFix })
     if (noInfo) {
       const cur = r.score, base = plan.cost()
       let best: { add: Placement[]; cost: number; ratio: number } | null = null
@@ -142,11 +148,23 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
       })
     }
     for (const x of verdicts) if (!x.v.ok) fails.push(x.v.line)
-    if (status === 'full' && r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) fails.push({ text: t(d, lang, 'walk_one_channel', { zone: zn }) })
-    out.push({ id: z.id, kind: 'room', zoneId: z.id, name: `${zn}`, status, works: status === 'full' || status === 'partial' ? works : [], fails, path, breakAt })
+    if (status === 'full' && r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) { oneWay++; fails.push({ text: t(d, lang, 'walk_one_channel', { zone: zn }) }) }
+    out.push({ id: z.id, kind: 'room', zoneId: z.id, name: `${zn}`, status, works: status === 'full' || status === 'partial' ? works : [], fails, path, breakAt, notes: [] })
   })
 
+  // The last stop is always there: the whole museum, with exit items (take-away catalogues) and a few lines about the visit as a whole.
   const exitHere = plan.placements.filter((p) => plan.items.get(p.item)?.moment === 'exit' && p.at === '')
-  if (exitHere.length) out.push(venueStop('exit', exitHere))
+  const end: Stop = exitHere.length ? venueStop('exit', exitHere) : { id: 'exit', kind: 'exit', name: '', status: 'ok', works: [], fails: [], path: [], notes: [] }
+  end.name = sx(lang, 'museum')
+  end.notes = [events[events.length - 1].text, museumGap(d, placements, lang), oneWay ? sx(lang, 'oneWay', { k: oneWay, n: d.zones.length }) : ''].filter(Boolean)
+  out.push(end)
   return out
+}
+
+/** Across all visitor types on a normal day: who found something to experience in the fewest rooms (empty when everyone found something everywhere). */
+export function museumGap(d: GameData, placements: Placement[], lang: Lang = 'en'): string {
+  const std = score(d, placements)
+  const rooms = d.personas.map((p) => ({ name: (lang === 'fi' && p.nameFi) || p.name, k: d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length }))
+  const zero = rooms.filter((r) => r.k === 0), weakest = [...rooms].sort((a, b) => a.k - b.k)[0]
+  return zero.length > 1 ? sx(lang, 'gapMany', { c: zero.length }) : weakest && weakest.k < d.zones.length ? sx(lang, 'gapOne', { name: weakest.name, k: weakest.k, n: d.zones.length }) : ''
 }
