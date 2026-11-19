@@ -182,6 +182,18 @@ describe('personas and situations (thin filters)', () => {
   })
 })
 
+describe('items.benefit', () => {
+  it('every purchasable item explains why it matters, in English and Finnish', () => {
+    for (const i of data.items.filter((i) => i.costEur > 0)) { expect(i.benefit.length, i.id).toBeGreaterThan(10); expect(i.benefitFi.length, i.id).toBeGreaterThan(10) }
+  })
+  it('a missing benefit column fails with a message naming sheet and column', () => {
+    const wb = XLSX.read(readFileSync('src/data/museum-builder-data.xlsx'))
+    const r = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.Items); r.forEach((x) => { delete x.benefit })
+    wb.Sheets.Items = XLSX.utils.json_to_sheet(r)
+    expect(() => parseWorkbook(wb)).toThrow(/sheet "Items" is missing column "benefit"/)
+  })
+})
+
 describe('items.moment', () => {
   it('every venue item has before/entrance/exit and every other item has room', () => {
     for (const i of data.items) expect(i.scope === 'venue' ? ['before', 'entrance', 'exit'] : ['room']).toContain(i.moment)

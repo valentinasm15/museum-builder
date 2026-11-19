@@ -93,6 +93,7 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
   /** One placed item: does it work for this persona today, and if not, why. */
   const verdict = (pl: Placement): { ok: boolean; line: StopLine } => {
     const it = plan.items.get(pl.item)!, miss = sc.inactive.find((x) => key(x.placement) === key(pl))
+    if (miss && miss.missing.every((g) => g === 'route')) return { ok: false, line: { text: t(d, lang, 'walk_inactive_route', { item: nm(it.id) }) } }
     if (miss) return { ok: false, line: { text: t(d, lang, 'walk_inactive', { item: nm(it.id), missing: needsText(d, lang, miss.missing.map((g) => g.split(' or '))) }) } }
     if (!usable(plan, it.id, pl.at, persona, memo))
       return { ok: false, line: { text: usable(bare, it.id, pl.at, persona) ? sx(lang, 'notToday', { item: nm(it.id) }) : sx(lang, 'notForThem', { item: nm(it.id), who: helpsText(d, lang, it) }) } }

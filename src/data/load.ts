@@ -7,7 +7,7 @@ export type Moment = 'before' | 'entrance' | 'room' | 'exit' // when in a visit 
 export interface Item {
   id: string; name: string; nameFi: string; scope: Scope; channel: string
   requires: Requires; enhances: string[]; reach: string; infoValue: number
-  costEur: number; enhanceFactor: number; reachGrant: string; kind: string; status: string; source: string; moment: Moment
+  costEur: number; enhanceFactor: number; reachGrant: string; kind: string; status: string; source: string; moment: Moment; benefit: string; benefitFi: string
 }
 export interface Persona {
   id: string; name: string; nameFi: string; visitorShare: number
@@ -61,12 +61,13 @@ function keyValue(wb: XLSX.WorkBook, name: string, key: string): Record<string, 
 
 export function parseWorkbook(wb: XLSX.WorkBook): GameData {
   const items = sheet(wb, 'Items', ['id', 'name', 'scope', 'channel', 'requires', 'enhances', 'reach',
-    'info_value', 'cost_eur', 'status', 'source', 'name_fi', 'enhance_factor', 'reach_grant', 'moment']).map((r): Item => ({
+    'info_value', 'cost_eur', 'status', 'source', 'name_fi', 'enhance_factor', 'reach_grant', 'moment', 'benefit']).map((r): Item => ({
     id: str(r.id), name: str(r.name), nameFi: str(r.name_fi), scope: str(r.scope) as Scope,
     channel: str(r.channel), requires: parseRequires(r.requires), enhances: list(r.enhances, ';'),
     reach: str(r.reach) || 'all', infoValue: num(r.info_value, 'Items', 'info_value', 0),
     costEur: num(r.cost_eur, 'Items', 'cost_eur'), enhanceFactor: num(r.enhance_factor, 'Items', 'enhance_factor', 1),
     reachGrant: str(r.reach_grant), kind: str(r.kind), status: str(r.status), source: str(r.source), moment: str(r.moment) as Moment,
+    benefit: str(r.benefit), benefitFi: str(r.benefit_fi) || str(r.benefit),
   }))
   const pRows = sheet(wb, 'Personas', ['id', 'name', 'visitorShare', 'status', 'name_fi'])
   const attrCols = Object.keys(pRows[0] ?? {}).filter((k) => !PERSONA_META.includes(k))

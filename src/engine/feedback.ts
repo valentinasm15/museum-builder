@@ -37,7 +37,7 @@ const LOCAL = {
   roomsLegend: { en: 'Guided = a route leads here and there is something to experience · With effort = found from the floor plan, no guiding route · Empty = reached, nothing to experience · Not guided = nothing leads here', fi: 'Opastettu = opaslinja johtaa tänne ja on koettavaa · Vaivalla = löytyy kartalta, ei opaslinjaa · Tyhjä = perillä, ei koettavaa · Ei opastusta = mikään ei johda tänne' },
   st_full: { en: 'Guided', fi: 'Opastettu' }, st_partial: { en: 'With effort', fi: 'Vaivalla' }, st_empty: { en: 'Empty', fi: 'Tyhjä' }, st_none: { en: 'Not guided', fi: 'Ei opastusta' },
   worked: { en: 'What worked: {rooms}.', fi: 'Toimi: {rooms}.' },
-  needRoute: { en: 'A tactile route to {rooms} ({cost}) would make the visit easier and more independent.', fi: 'Opaslinja huoneisiin {rooms} ({cost}) tekisi vierailusta helpomman ja itsenäisemmän.' },
+  needRoute: { en: 'A tactile route to {rooms} ({cost}) would make the visit easier and more independent, and lead visitors to what is there.', fi: 'Opaslinja huoneisiin {rooms} ({cost}) tekisi vierailusta helpomman ja itsenäisemmän ja johdattaisi kävijät esineiden luo.' },
   emptyRooms: { en: 'Reached, but nothing this visitor can use: {rooms}.', fi: 'Perillä, mutta ei käytettävää tälle kävijälle: {rooms}.' },
   showWalk: { en: 'Show the full walkthrough', fi: 'Näytä koko kierros' },
   colType: { en: 'Visitor type', fi: 'Kävijätyyppi' }, colShare: { en: 'Share', fi: 'Osuus' }, colResult: { en: 'Result', fi: 'Tulos' }, colRooms: { en: 'Rooms', fi: 'Huoneet' },

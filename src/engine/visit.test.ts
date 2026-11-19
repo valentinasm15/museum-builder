@@ -122,3 +122,8 @@ it('a visitor who needs a continuous route gets the stronger wording; others get
   expect(room(need)).toMatch(/continuous guiding route/)
   expect(room(noPhone)).toMatch(/more effort and less independence/)
 })
+
+it('an item that needs a route is explained as easy to miss, not as broken', () => {
+  const room = stops(d, [P('braille_label', back.id)], d.personas.find((p) => p.attrs.readsBraille)!).find((x) => x.zoneId === back.id)!
+  expect(room.fails.some((f) => /no way of knowing exactly where it is/.test(f.text))).toBe(true)
+})

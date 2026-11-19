@@ -124,8 +124,14 @@ function Fixture({ d, lang, f }: { d: GameData; lang: Lang; f: Feature }) {
   return (
     <group position={[x, 0, z]} onPointerOver={(e) => { e.stopPropagation(); setOn(true) }} onPointerOut={() => setOn(false)} onClick={(e) => { e.stopPropagation(); setOn((v) => !v) }}>
       <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
-      {f.kind === 'exit' && <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}><ExitSign /></Html>}
-      {on && NAMED.includes(f.kind) && <Html position={[0, f.kind === 'exit' ? 2.6 : 1.9, 0]} center zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}><span className="elabel small">{name}</span></Html>}
+      {NAMED.includes(f.kind) && ( // always mounted, only shown on hover: mounting drei's Html from an event handler breaks React
+        <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
+          <div style={{ position: 'relative' }}>
+            {f.kind === 'exit' && <ExitSign />}
+            <span className="elabel small" style={{ position: 'absolute', bottom: f.kind === 'exit' ? '100%' : 0, left: '50%', transform: 'translateX(-50%)', visibility: on ? 'visible' : 'hidden', zIndex: 2 }}>{name}</span>
+          </div>
+        </Html>
+      )}
     </group>
   )
 }

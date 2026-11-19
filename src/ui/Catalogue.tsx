@@ -48,7 +48,7 @@ function Detail({ d, item }: { d: GameData; item: Item }) {
       {d.texts[key] && <p className="tag">+ {t(d, lang, key)}</p>}
       <p><b>{t(d, lang, 'helps')}:</b> {helpsText(d, lang, item)}</p>
       <p><b>{t(d, lang, 'requires')}:</b> {needsText(d, lang, item.requires)}</p>
-      {item.source && <p className="src"><b>{t(d, lang, 'source')}:</b> {item.source}</p>}
+      {item.benefit && <p><b>{t(d, lang, 'source')}:</b> {(lang === 'fi' && item.benefitFi) || item.benefit}</p>}
       <Targets d={d} item={item} />
     </div>
   )
