@@ -14,6 +14,7 @@ const LOOK: Record<string, { color: string; glyph: string; shape: Shape }> = {
   visual_enhanced: { color: P.green, glyph: 'Aa', shape: 'panel' },
   visual: { color: P.green, glyph: '◉', shape: 'panel' },
   human: { color: P.plum, glyph: '☺', shape: 'cone' },
+  captions: { color: P.green, glyph: 'CC', shape: 'panel' },
 }
 const FALLBACK = { color: P.neutral, glyph: '◼', shape: 'box' as Shape }
 

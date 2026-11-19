@@ -182,6 +182,22 @@ describe('personas and situations (thin filters)', () => {
   })
 })
 
+describe('captions item', () => {
+  const lowVision = data.personas.find((p) => p.attrs.residualVision && !p.attrs.glareSensitive)!
+  const screen = data.zones.find((z) => z.hasScreen)!, noScreen = data.zones.find((z) => !z.hasScreen)!
+  it('gives low-vision visitors a captions channel in a room with a screen', () => {
+    const r = score(data, [{ item: 'large_print_captions', at: screen.id }])
+    expect(r.zones[screen.id][lowVision.id].channels).toContain('captions')
+    expect(r.inactive).toHaveLength(0)
+  })
+  it('does nothing without a screen, and nothing for blind visitors', () => {
+    const r = score(data, [{ item: 'large_print_captions', at: noScreen.id }])
+    expect(r.inactive.map((i) => i.placement.item)).toContain('large_print_captions')
+    const blind = data.personas.find((p) => !p.attrs.residualVision)!
+    expect(score(data, [{ item: 'large_print_captions', at: screen.id }]).zones[screen.id][blind.id].channels).not.toContain('captions')
+  })
+})
+
 describe('items.benefit', () => {
   it('every purchasable item explains why it matters, in English and Finnish', () => {
     for (const i of data.items.filter((i) => i.costEur > 0)) { expect(i.benefit.length, i.id).toBeGreaterThan(10); expect(i.benefitFi.length, i.id).toBeGreaterThan(10) }
