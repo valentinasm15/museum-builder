@@ -1,4 +1,5 @@
 import { Html, RoundedBox } from '@react-three/drei'
+import { useState } from 'react'
 import type { Feature, GameData } from '../data/load'
 import type { Lang } from '../store'
 import { world } from './Pieces'
@@ -99,26 +100,37 @@ function Prop({ f, turn }: { f: Feature; turn: number }) {
   }
 }
 
-// Symbols, not titles, for the building's fixed parts: the map stays about the exhibition. The name is the tooltip.
-const SYMBOL: Partial<Record<Feature['kind'], string>> = { lift: '🛗', stairs: '🪜', wc: '🚻', exit: '🚪', feedback: '💬' }
-
-/** Fixed parts of the real building (lift, stairs, exits, toilets, feedback point, exhibit walls). Names come from the Features sheet. */
-export default function Props({ d, lang }: { d: GameData; lang: Lang }) {
+/** The universal emergency-exit sign (green square, white figure running through a door). Drawn here so the map needs no image file. */
+function ExitSign() {
   return (
-    <>
-      {d.features.map((f) => {
-        const [x, z] = world(d, f.x + f.w / 2, f.y + f.h / 2)
-        return (
-          <group key={f.id} position={[x, 0, z]}>
-            <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
-            {SYMBOL[f.kind] && (
-              <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
-                <span className="elabel small" title={(lang === 'fi' && f.nameFi) || f.nameEn} aria-hidden="true">{SYMBOL[f.kind]}</span>
-              </Html>
-            )}
-          </group>
-        )
-      })}
-    </>
+    <svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true" style={{ display: 'block', borderRadius: 4 }}>
+      <rect width="48" height="48" fill="#0a8f3c" />
+      <g fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M31 9h9v30h-9" />
+        <path d="M17 20l3 8-6 9M20 28l6 7M17 20l-6 4M17 20l8 3" />
+      </g>
+      <circle cx="17" cy="13" r="3.4" fill="#fff" />
+    </svg>
   )
+}
+
+const NAMED: Feature['kind'][] = ['lift', 'stairs', 'wc', 'exit', 'feedback']
+
+/** One fixed part of the building. Names appear only on hover or tap, so the map stays about the exhibition; exits always show the universal sign. */
+function Fixture({ d, lang, f }: { d: GameData; lang: Lang; f: Feature }) {
+  const [on, setOn] = useState(false)
+  const [x, z] = world(d, f.x + f.w / 2, f.y + f.h / 2)
+  const name = (lang === 'fi' && f.nameFi) || f.nameEn
+  return (
+    <group position={[x, 0, z]} onPointerOver={(e) => { e.stopPropagation(); setOn(true) }} onPointerOut={() => setOn(false)} onClick={(e) => { e.stopPropagation(); setOn((v) => !v) }}>
+      <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
+      {f.kind === 'exit' && <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}><ExitSign /></Html>}
+      {on && NAMED.includes(f.kind) && <Html position={[0, f.kind === 'exit' ? 2.6 : 1.9, 0]} center zIndexRange={[6, 0]} style={{ pointerEvents: 'none' }}><span className="elabel small">{name}</span></Html>}
+    </group>
+  )
+}
+
+/** Fixed parts of the real building (lift, stairs, exits, feedback point, exhibit walls). Names come from the Features sheet. */
+export default function Props({ d, lang }: { d: GameData; lang: Lang }) {
+  return <>{d.features.map((f) => <Fixture key={f.id} d={d} lang={lang} f={f} />)}</>
 }
