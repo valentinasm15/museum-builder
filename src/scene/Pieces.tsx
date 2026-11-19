@@ -1,6 +1,6 @@
 import { Edges, Html, RoundedBox } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Group } from 'three'
 import type { GameData, Item, Segment } from '../data/load'
 import { lookOf, P, type Shape } from './look'
@@ -10,12 +10,14 @@ export const world = (d: GameData, x: number, y: number): [number, number] => [x
 
 const HEIGHT: Record<Shape, number> = { box: 0.5, cyl: 0.5, slab: 0.22, panel: 0.6, cone: 0.6 }
 
-export function ItemBlock({ item, pos, active }: { item: Item; pos: [number, number, number]; active: boolean }) {
+/** A placed item. Hover (or tap) shows its name, and why it does not work yet if that is so, so decisions can be re-evaluated on the map. */
+export function ItemBlock({ item, pos, active, label }: { item: Item; pos: [number, number, number]; active: boolean; label: string }) {
+  const [on, setOn] = useState(false)
   const look = lookOf(item)
   const h = HEIGHT[look.shape]
   const mat = <meshStandardMaterial color={active ? look.color : P.dim} transparent={!active} opacity={active ? 1 : 0.5} roughness={0.7} />
   return (
-    <group position={pos}>
+    <group position={pos} onPointerOver={(e) => { e.stopPropagation(); setOn(true) }} onPointerOut={() => setOn(false)} onClick={(e) => { e.stopPropagation(); setOn((v) => !v) }}>
       <group position={[0, h / 2, 0]}>
         {look.shape === 'cyl' && <mesh castShadow><cylinderGeometry args={[0.26, 0.26, h, 24]} />{mat}{!active && <Edges color="#6b6458" />}</mesh>}
         {look.shape === 'cone' && <mesh castShadow><coneGeometry args={[0.28, h, 24]} />{mat}{!active && <Edges color="#6b6458" />}</mesh>}
@@ -25,6 +27,10 @@ export function ItemBlock({ item, pos, active }: { item: Item; pos: [number, num
       </group>
       <Html position={[0, h + 0.3, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
         <span aria-hidden="true" className={active ? 'glyph' : 'glyph warn'}>{active ? look.glyph : `⚠ ${look.glyph}`}</span>
+      </Html>
+      {/* always mounted, only shown on hover: mounting drei's Html from an event handler breaks React */}
+      <Html position={[0, h + 1.1, 0]} center zIndexRange={[30, 20]} style={{ pointerEvents: 'none' }}>
+        <div style={{ width: 'max-content', maxWidth: '14rem', visibility: on ? 'visible' : 'hidden' }}><span className={active ? 'elabel small tip' : 'elabel small tip warn'}>{label}</span></div>
       </Html>
     </group>
   )
@@ -44,7 +50,7 @@ export function Platform({ d, x, y, w, h, label, num, hint, mark, selected, targ
         <meshStandardMaterial color={P.wood} roughness={0.8} />
       </RoundedBox>
       {children}
-      <Html position={[w > 5 ? 1.5 - w / 2 : 0, 0.9, 0]} center zIndexRange={[10, 0]}>
+      <Html position={[w / 2 - 0.55, 0.9, h / 2 - 0.55]} center zIndexRange={[10, 0]}> {/* corner away from the items, which start top-left */}
         <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button>
       </Html>
     </group>

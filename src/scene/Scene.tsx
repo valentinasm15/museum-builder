@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { GameData } from '../data/load'
 import { Plan } from '../engine/score'
-import { inactiveMap, itemName, t, targetName, useGame } from '../store'
+import { inactiveMap, itemName, needsText, t, targetName, useGame } from '../store'
 import { P } from './look'
 import { wallRuns } from './footprint'
 import { ItemBlock, Platform, RouteStrip, Wall, Walker, world } from './Pieces'
@@ -47,7 +47,9 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
     const cols = Math.max(1, Math.floor((w - 0.2) / 0.9))
     return itemsAt(at).map((it, k) => {
       const [px, pz] = world(d, x + 0.6 + (k % cols) * 0.9, y + 0.6 + Math.floor(k / cols) * 0.9)
-      return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
+      const gaps = missing.get(`${it.id}@${at}`)
+      const label = gaps ? `${itemName(lang, it)}: ${t(d, lang, 'needs_missing', { missing: needsText(d, lang, gaps) })}` : itemName(lang, it)
+      return <ItemBlock key={it.id} item={it} active={!gaps} label={label} pos={[px - w0[0], 0.18, pz - w0[1]]} />
     })
   }
   const a = Math.PI / 4 + rot * (Math.PI / 2)
