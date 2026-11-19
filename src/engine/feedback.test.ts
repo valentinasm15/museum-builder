@@ -93,3 +93,26 @@ it('an enabler bought without content is idle, not the "weakest buy"; with conte
   const far = debrief(d, [{ item: 'tactile_route', at: d.route.filter((s) => !s.existing)[1].id }], v('with_audio_guide'), 'fi')
   expect(far.idle[0]?.text ?? '').not.toMatch(/[{}]|undefined/)
 }, 60000)
+
+it('overall band is never better than Partial while some visitor type gets nothing in any room', () => {
+  const z = d.zones[0].id
+  // plenty for low vision, nothing for the blind types
+  const ps = [...d.zones.map((zz) => ({ item: 'large_print_label', at: zz.id })), { item: 'large_print_catalogue', at: '' }]
+  const x = debrief(d, ps, v('with_audio_guide'), 'en')
+  expect(x.others.some((o) => o.rooms === 0)).toBe(true)
+  expect(x.band).toBe('partial')
+  expect(z).toBeTruthy()
+}, 30000)
+
+it('next step names the most valuable buy even when unaffordable, and never talks about points', () => {
+  const lang = 'en' as const
+  const spendAll = [P2('audio_guide_devices', ''), ...d.zones.map((zz) => P2('large_print_label', zz.id))]
+  for (const ps of [[], spendAll]) {
+    const s = nextStep(d, lang, ps)
+    expect(s).not.toMatch(/points|[{}]|NaN|undefined/)
+    expect(s.length).toBeGreaterThan(10)
+  }
+  expect(nextStep(d, lang, [])).toMatch(/visitor types more/)
+}, 60000)
+
+const P2 = (item: string, at: string) => ({ item, at })

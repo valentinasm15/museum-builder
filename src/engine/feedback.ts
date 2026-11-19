@@ -47,7 +47,11 @@ const LOCAL = {
   showTable: { en: 'Show all visitor types', fi: 'Näytä kaikki kävijätyypit' },
   benchLine: { en: 'Benchmark at your spend: {band} ({bench}; you {you}).', fi: 'Vertailu samalla summalla: {band} ({bench}; sinä {you}).' },
   moreTrade: { en: 'Trade-offs in your plan', fi: 'Suunnitelmasi valinnat' },
-  nextBuy: { en: 'Best next buy: {what} ({cost}), about +{points} points.', fi: 'Paras seuraava ostos: {what} ({cost}), noin +{points} pistettä.' },
+  nextBuy: { en: 'Best next buy: {what} ({cost}). It would help {n} of {total} visitor types more.', fi: 'Paras seuraava ostos: {what} ({cost}). Se auttaisi {n}/{total} kävijätyyppiä enemmän.' },
+  nextShort: { en: 'The biggest step would be {what} ({cost}); you are {short} short.', fi: 'Suurin askel olisi {what} ({cost}); sinulta puuttuu {short}.' },
+  gameTitle: { en: 'Your game', fi: 'Pelisi' },
+  roundLine: { en: 'Round {n}: {visitor}. For this visitor: {focal}. Whole museum: {overall}.', fi: 'Kierros {n}: {visitor}. Tälle kävijälle: {focal}. Koko museo: {overall}.' },
+  playAgain: { en: 'Play again', fi: 'Pelaa uudelleen' },
   nextNone: { en: 'Nothing you can still afford adds access. Consider removing something that does not pay off.', fi: 'Mikään jäljellä olevalla rahalla ostettava ei lisää saavutettavuutta. Harkitse heikon ostoksen poistamista.' },
   left: { en: 'left', fi: 'jäljellä' },
   idleWait: { en: '{item} ({cost}) is waiting: nothing you placed uses it yet. It carries {needs}.', fi: '{item} ({cost}) odottaa: mikään sijoittamasi ei käytä sitä vielä. Se tarvitsee sisältöä: {needs}.' },
@@ -155,9 +159,10 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
   const roomsOf = (p: Persona) => d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length
   const others = d.personas.map((p) => ({ id: p.id, name: nameOf(p, lang), share: p.visitorShare, band: band(d, std.personas[p.id]), rooms: roomsOf(p), total: d.zones.length }))
   const gap = museumGap(d, placements, lang)
+  const zero = others.filter((o) => o.rooms === 0)
   const inactiveTotal = std.inactive.filter((x) => placements.some((p) => p.item === x.placement.item && p.at === x.placement.at)).reduce((a, x) => a + single(x.placement), 0)
   return {
-    band: band(d, std.overall),
+    band: zero.length ? 'partial' as Band : band(d, std.overall), // a plan that leaves some visitor type with nothing is never better than Partial overall
     focal: { persona: names.persona, situation: names.situation, band: band(d, day.personas[persona.id] ?? 0),
       skipped: events.filter((e) => e.key === 'not_reachable').map((e) => e.text), end: events[events.length - 1].text,
       rooms, gaps, walk: events.map((e) => e.text) },
@@ -198,19 +203,27 @@ export function efficiency(d: GameData, lang: Lang, placements: Placement[], me:
 
 /** Best affordable next purchase (access gain per euro), as one sentence. Slow like the benchmark: call it off the main render. */
 export function nextStep(d: GameData, lang: Lang, placements: Placement[]): string {
-  const plan = new Plan(d, placements), base = score(d, placements).overall, left = budget(d) - plan.cost()
+  const plan = new Plan(d, placements), cur = score(d, placements), left = budget(d) - plan.cost()
   const name = (id: string) => itemName(lang, d.items.find((i) => i.id === id)!)
-  let best: { add: Placement[]; cost: number; gain: number; ratio: number } | null = null
+  type Opt = { add: Placement[]; cost: number; gain: number; helped: number }
+  const opts: Opt[] = []
   for (const c of candidates(d)) for (const add of bundles(plan, c)) {
     if (!add.length) continue
     const next = [...placements, ...add], cost = new Plan(d, next).cost() - plan.cost()
-    if (cost <= 0 || cost > left) continue
-    const gain = score(d, next).overall - base
-    if (gain > 1e-9 && (!best || gain / cost > best.ratio)) best = { add, cost, gain, ratio: gain / cost }
+    if (cost <= 0 || cost > budget(d)) continue // anything beyond the whole budget is not advice
+    const r = score(d, next), gain = r.overall - cur.overall
+    if (gain > 1e-9) opts.push({ add, cost, gain, helped: d.personas.filter((p) => r.personas[p.id] - cur.personas[p.id] > 1e-9).length })
   }
-  if (!best) return local(lang, 'nextNone')
-  const main = best.add.find((p) => p.at !== '' ) ?? best.add[0]
-  const extras = [...new Set(best.add.filter((p) => p.item !== main.item).map((p) => p.item))].map(name)
-  const what = [`${name(main.item)}${main.at ? `, ${targetName(d, lang, main.at)}` : ''}`, ...extras].join(' + ')
-  return local(lang, 'nextBuy', { what, cost: money(lang, best.cost), points: Math.max(1, Math.round(best.gain * 100)) })
+  const bigger = (a: Opt | undefined, b: Opt) => (!a || b.gain > a.gain + 1e-9 || (Math.abs(b.gain - a.gain) <= 1e-9 && b.cost < a.cost) ? b : a) // most gain, then cheapest
+  const top = opts.reduce<Opt | undefined>(bigger, undefined), best = opts.filter((o) => o.cost <= left).reduce<Opt | undefined>(bigger, undefined)
+  const what = (o: Opt) => { // zone items with their room, venue items by name, route segments as a count
+    const kind = (p: Placement) => d.items.find((i) => i.id === p.item)!.scope
+    const part = (p: Placement) => `${name(p.item)}${kind(p) === 'zone' ? `, ${targetName(d, lang, p.at)}` : ''}`
+    const routes = o.add.filter((p) => kind(p) === 'path')
+    return [...o.add.filter((p) => kind(p) !== 'path').map(part), ...(routes.length ? [`${name(routes[0].item)}${routes.length > 1 ? ` ×${routes.length}` : ''}`] : [])].join(' + ')
+  }
+  const buy = (o: Opt) => local(lang, 'nextBuy', { what: what(o), cost: money(lang, o.cost), n: o.helped, total: d.personas.length })
+  if (!top) return local(lang, 'nextNone')
+  if (!best) return local(lang, 'nextShort', { what: what(top), cost: money(lang, top.cost), short: money(lang, top.cost - left) })
+  return best === top ? buy(best) : `${local(lang, 'nextShort', { what: what(top), cost: money(lang, top.cost), short: money(lang, top.cost - left) })} ${buy(best)}`
 }

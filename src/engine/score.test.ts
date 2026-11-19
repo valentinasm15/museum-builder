@@ -62,7 +62,7 @@ describe('engine', () => {
     expect(efficiency).toBeLessThanOrEqual(efficiencyAtSpend)
     const full = benchmark(data, data.settings.budget_eur)
     expect(full.result.spent).toBeLessThanOrEqual(data.settings.budget_eur)
-  }, 20000)
+  }, 60000) // the greedy benchmark takes ~9 s; more when the whole suite runs in parallel
 
   it('lighting raises low-vision reach and exhibit_view value, nothing for blind personas', () => {
     const lit = score(data, [at('lighting', 'lajittelu'), at('lighting')])

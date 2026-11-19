@@ -5,6 +5,7 @@ import { Plan, score, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
 export type Phase = 'planning' | 'visiting' | 'debrief'
+export interface RoundResult { n: number; visitor: string; focal: string; overall: string } // bands as plain strings, kept for the end-of-game list
 /** What the scene shows during the walkthrough: the route the visitor walks to where they stand (grid tiles), the break in the route, and a mark per room already visited. */
 export interface WalkView { path: [number, number][]; barrier?: [number, number]; marks: Record<string, { icon: string; text: string }> }
 
@@ -13,6 +14,7 @@ interface State {
   placements: Placement[]; selected: string | null; announcement: string
   sound: boolean; setSound: (on: boolean) => void // click cues, off by default, remembered in the browser
   visit: Visit; round: number; phase: Phase
+  rounds: RoundResult[]; setRound: (r: RoundResult) => void; restart: () => void
   walk: { pid: string; i: number }; setWalk: (w: Partial<{ pid: string; i: number }>) => void
   walkView: WalkView | null; setWalkView: (v: WalkView | null) => void
   focus: string | null // zone id shown as selected in both the scene and the Room text view
@@ -126,6 +128,13 @@ export const useGame = create<State>((set, get) => {
   }
   return {
     data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', sound: soundSaved(), focus: null, visit: noVisit, round: 1, phase: 'planning',
+    rounds: [], setRound: (r) => set({ rounds: [...get().rounds.filter((x) => x.n !== r.n), r].sort((a, b) => a.n - b.n) }),
+    restart: () => {
+      const { base, data, lang } = get()
+      if (!base || !data) return
+      const visit = drawVisit(base)
+      set({ placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', rounds: [], walkView: null, announcement: drawn(data, lang, visit) })
+    },
     walk: { pid: '', i: 0 }, setWalk: (w) => set({ walk: { ...get().walk, ...w } }), walkView: null, setWalkView: (walkView) => set({ walkView }),
     setFocus: (focus) => set({ focus }),
     init: (base) => {

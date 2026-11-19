@@ -6,7 +6,7 @@ import { money, t, useGame, visitCtx } from '../store'
 
 // Plain headings, lists and text: reads in order with a screen reader, no animation.
 export default function Debrief({ d }: { d: GameData }) {
-  const { lang, placements, visit: v, round, startRound, closeVisit } = useGame()
+  const { lang, placements, visit: v, round, startRound, closeVisit, rounds, setRound, restart } = useGame()
   const ref = useRef<HTMLDialogElement>(null)
   const nextBtn = useRef<HTMLButtonElement>(null)
   const [me, setMe] = useState<ReturnType<typeof moneyEfficiency> | null>(null)
@@ -14,6 +14,7 @@ export default function Debrief({ d }: { d: GameData }) {
   const x = useMemo(() => debrief(d, placements, v, lang), [d, placements, v, lang])
   const eff = useMemo(() => (me ? efficiency(d, lang, placements, me, visitCtx(d, v)) : null), [d, lang, placements, me, v])
   const more = round < (d.settings.rounds ?? 1)
+  useEffect(() => { setRound({ n: round, visitor: x.focal.persona, focal: x.focal.band, overall: x.band }) }, [round, x.focal.persona, x.focal.band, x.band, setRound])
   const b = (k: Parameters<typeof bandText>[2]) => bandText(d, lang, k)
   const close = lang === 'fi' ? 'Sulje' : 'Close'
 
@@ -89,10 +90,16 @@ export default function Debrief({ d }: { d: GameData }) {
         <p role="status">{next ?? t(d, lang, 'loading')}</p>
       </section>
 
+      {!more && <section aria-labelledby="deb-game-h" id="deb-game">
+        <h3 id="deb-game-h">{L('gameTitle')}</h3>
+        <ol>{rounds.map((r) => <li key={r.n}>{L('roundLine', { n: r.n, visitor: r.visitor, focal: b(r.focal as Parameters<typeof bandText>[2]), overall: b(r.overall as Parameters<typeof bandText>[2]) })}</li>)}</ol>
+      </section>}
+
       <p className="note">{t(d, lang, 'deb_no_perfect')}</p>
       <div className="intro-nav">
         <button type="button" onClick={() => ref.current?.close()}>{close}</button>
-        {more && <button type="button" ref={nextBtn} onClick={nxt}>{t(d, lang, 'next_round')}</button>}
+        {more ? <button type="button" ref={nextBtn} onClick={nxt}>{t(d, lang, 'next_round')}</button>
+          : <button type="button" ref={nextBtn} onClick={() => { restart(); ref.current?.close() }}>{L('playAgain')}</button>}
       </div>
     </dialog>
   )

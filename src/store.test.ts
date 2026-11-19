@@ -97,3 +97,16 @@ it('round 2 keeps the plan and budget, redraws without the round-1 persona; debr
   expect(s().visit.personaId).not.toBe(p1)
   expect(s().announcement).toContain(s().visit.personaId ? data.personas.find((p) => p.id === s().visit.personaId)!.name : '')
 })
+
+it('rounds are recorded once each, and restart clears the plan and the record', () => {
+  useGame.getState().setRound({ n: 1, visitor: 'A', focal: 'good', overall: 'partial' })
+  useGame.getState().setRound({ n: 1, visitor: 'A', focal: 'strong', overall: 'good' })
+  useGame.getState().setRound({ n: 2, visitor: 'B', focal: 'partial', overall: 'partial' })
+  expect(useGame.getState().rounds.map((r) => r.n)).toEqual([1, 2])
+  expect(useGame.getState().rounds[0].focal).toBe('strong')
+  useGame.getState().restart()
+  expect(useGame.getState().rounds).toEqual([])
+  expect(useGame.getState().round).toBe(1)
+  expect(useGame.getState().placements).toEqual([])
+  expect(useGame.getState().phase).toBe('planning')
+})
