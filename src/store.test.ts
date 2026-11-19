@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { loadData } from './data/load'
-import { budget, drawVisit, remaining, t, useGame } from './store'
+import { budget, drawVisit, remaining, t, useGame, waitingMap } from './store'
 
 const data = loadData(readFileSync('src/data/museum-builder-data.xlsx'))
 const s = () => useGame.getState()
@@ -118,4 +118,13 @@ it('the open item card is closed when a new game or the walkthrough starts', () 
   s().setInspect({ item: 'audio_description', at: data.zones[0].id })
   s().restart()
   expect(s().inspect).toBeNull()
+})
+
+it('screens and other carriers are "waiting" until something placed uses them', () => {
+  const screen = data.zones.find((z) => z.hasScreen)!.id
+  expect(waitingMap(data, []).has(`video_screen@${screen}`)).toBe(true) // existing screen, nothing accessible yet
+  expect(waitingMap(data, [{ item: 'large_print_captions', at: screen }]).has(`video_screen@${screen}`)).toBe(false)
+  expect(waitingMap(data, [{ item: 'audio_guide_devices', at: '' }]).has('audio_guide_devices@')).toBe(true)
+  expect(waitingMap(data, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: data.zones[0].id }]).has('audio_guide_devices@')).toBe(false)
+  expect(waitingMap(data, [{ item: 'staff_training', at: '' }]).has('staff_training@')).toBe(false) // staff training has value of its own
 })

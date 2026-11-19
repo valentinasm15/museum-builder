@@ -15,6 +15,7 @@ const LOOK: Record<string, { color: string; glyph: string; shape: Shape }> = {
   visual: { color: P.green, glyph: '◉', shape: 'panel' },
   human: { color: P.plum, glyph: '☺', shape: 'cone' },
   captions: { color: P.green, glyph: 'CC', shape: 'panel' },
+  braille_transcript: { color: P.amber, glyph: '⠿', shape: 'panel' },
 }
 const FALLBACK = { color: P.neutral, glyph: '◼', shape: 'box' as Shape }
 

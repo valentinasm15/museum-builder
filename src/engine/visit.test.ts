@@ -127,3 +127,16 @@ it('an item that needs a route is explained as easy to miss, not as broken', () 
   const room = stops(d, [P('braille_label', back.id)], d.personas.find((p) => p.attrs.readsBraille)!).find((x) => x.zoneId === back.id)!
   expect(room.fails.some((f) => /no way of knowing exactly where it is/.test(f.text))).toBe(true)
 })
+
+it('a screen with no followable film gets a line and a fix; with captions or description it does not', () => {
+  const screen = d.zones.find((z) => z.hasScreen)!
+  const low = d.personas.find((p) => p.attrs.residualVision && !p.attrs.glareSensitive)!
+  const bare = stops(d, [], low).find((x) => x.zoneId === screen.id)!
+  const line = bare.fails.find((f) => /film plays on this screen/.test(f.text))
+  expect(line).toBeDefined()
+  expect(line!.fix?.cost).toBeGreaterThan(0)
+  const fixed = stops(d, [P('large_print_captions', screen.id)], low).find((x) => x.zoneId === screen.id)!
+  expect(fixed.fails.some((f) => /film plays on this screen/.test(f.text))).toBe(false)
+  const noScreen = d.zones.find((z) => !z.hasScreen)!
+  expect(stops(d, [], low).find((x) => x.zoneId === noScreen.id)!.fails.some((f) => /film plays/.test(f.text))).toBe(false)
+})

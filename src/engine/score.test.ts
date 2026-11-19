@@ -224,3 +224,26 @@ describe('items.moment', () => {
     expect(() => parseWorkbook(rows((r) => { delete r.moment }))).toThrow(/sheet "Items" is missing column "moment"/)
   })
 })
+
+describe('screen accessibility items', () => {
+  const screen = data.zones.find((z) => z.hasScreen)!
+  const blind = data.personas.find((p) => p.attrs.usesSmartphone && !p.attrs.residualVision && !p.attrs.readsBraille)!
+  const braille = data.personas.find((p) => p.attrs.readsBraille)!
+  it('description through the screen speakers needs no devices or phone', () => {
+    const r = score(data, [{ item: 'integrated_audio_description', at: screen.id }])
+    expect(r.inactive).toHaveLength(0)
+    expect(r.zones[screen.id][blind.id].channels).toContain('audio')
+  })
+  it('the braille transcript helps only braille readers', () => {
+    const r = score(data, [{ item: 'braille_film_transcript', at: screen.id }])
+    expect(r.zones[screen.id][braille.id].channels).toContain('braille_transcript')
+    expect(r.zones[screen.id][blind.id].channels).not.toContain('braille_transcript')
+  })
+  it('the start button makes the description more useful and does nothing alone', () => {
+    const base = [{ item: 'integrated_audio_description', at: screen.id }]
+    const a = score(data, base).zones[screen.id][blind.id].info
+    const b = score(data, [...base, { item: 'film_start_button', at: screen.id }]).zones[screen.id][blind.id].info
+    expect(b).toBeGreaterThan(a)
+    expect(score(data, [{ item: 'film_start_button', at: screen.id }]).personas[blind.id]).toBe(score(data, []).personas[blind.id])
+  })
+})

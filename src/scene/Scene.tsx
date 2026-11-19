@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { GameData, Item } from '../data/load'
 import { Plan } from '../engine/score'
 import ItemInfo from '../ui/ItemInfo'
-import { inactiveMap, itemName, t, targetName, useGame } from '../store'
+import { inactiveMap, itemName, t, targetName, useGame, waitingMap } from '../store'
 import { lookOf, P } from './look'
 import { wallRuns } from './footprint'
 import { ItemBlock, ItemRow, Platform, RouteStrip, Wall, Walker, world } from './Pieces'
@@ -39,6 +39,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
   const W = d.settings.grid_w, H = d.settings.grid_h
   const plan = useMemo(() => new Plan(d, placements), [d, placements])
   const missing = useMemo(() => inactiveMap(d, placements), [d, placements])
+  const waiting = useMemo(() => waitingMap(d, placements), [d, placements])
   const picked = selected ? d.items.find((i) => i.id === selected) : undefined
   const itemsAt = (at: string) =>
     [...d.existing.filter((e) => e.zoneId === at).map((e) => e.itemId), ...placements.filter((p) => p.at === at).map((p) => p.item)]
@@ -51,9 +52,9 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
       <>
         {here.map((it, k) => {
           const [px, pz] = world(d, x + 0.6 + (k % cols) * 1.05, y + 0.6 + Math.floor(k / cols) * 1.05)
-          return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
+          return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
         })}
-        <ItemRow y={[1.3, -h / 2 - 0.3]} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
+        <ItemRow y={[1.3, -h / 2 - 0.3]} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
       </>
     )
   }

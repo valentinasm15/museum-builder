@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import type { GameData } from '../data/load'
 import type { Placement } from '../engine/score'
-import { inactiveMap, isExisting, itemName, needsText, t, targetName, useGame } from '../store'
+import { inactiveMap, isExisting, itemName, needsText, t, targetName, useGame, waitingMap } from '../store'
 
 export default function Room({ d }: { d: GameData }) {
   const { lang, placements, remove, focus, setFocus } = useGame()
   const missing = useMemo(() => inactiveMap(d, placements), [d, placements])
+  const waiting = useMemo(() => waitingMap(d, placements), [d, placements])
   const all: Placement[] = [...d.existing.map((e) => ({ item: e.itemId, at: e.zoneId })), ...placements]
   const route = d.items.find((i) => i.scope === 'path')
 
@@ -17,6 +18,7 @@ export default function Room({ d }: { d: GameData }) {
       <li key={`${p.item}@${p.at}`}>
         <span className="name">{itemName(lang, item)}</span>{' — '}
         {gaps ? <span className="bad">{t(d, lang, 'needs_missing', { missing: needsText(d, lang, gaps) })}</span>
+          : waiting.has(`${p.item}@${p.at}`) ? <span className="bad">{t(d, lang, 'waiting_state')}: {t(d, lang, 'waiting_needs', { needs: waiting.get(`${p.item}@${p.at}`)!.slice(0, 4).map((id) => itemName(lang, d.items.find((i) => i.id === id)!)).join(', ') })}</span>
           : <span className="good">{t(d, lang, 'active')}</span>}
         {!mine && <> · {t(d, lang, 'existing')}</>}
         {mine && <button type="button" className="small" onClick={() => { remove(p); document.getElementById('room-h')?.focus() }}>

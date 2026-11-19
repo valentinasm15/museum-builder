@@ -3,6 +3,7 @@ import { helpsText, itemName, money, needsText, t, targetName, type Lang } from 
 import { bundles, candidates } from './benchmark'
 import { Plan, score, usable, zoneScore, type Placement, type VisitContext } from './score'
 
+const SCREEN = 'video_screen' // the item that puts a screen in a room (Items sheet)
 export interface VisitEvent { key: string; text: string; zoneId?: string }
 
 const zoneName = (z: Zone, lang: Lang) => (lang === 'fi' && z.nameFi) || z.nameEn
@@ -74,6 +75,8 @@ const S = {
   gapOne: { en: '{name} found something to experience in only {k} of {n} rooms.', fi: '{name} löysi koettavaa vain {k}/{n} huoneesta.' },
   gapMany: { en: '{c} visitor types found nothing to experience in any room.', fi: '{c} kävijätyyppiä ei löytänyt koettavaa yhdestäkään huoneesta.' },
   oneWay: { en: 'In {k} of {n} rooms there is only one way to take in the exhibits.', fi: '{k}/{n} huoneessa näyttelyn voi kokea vain yhdellä tavalla.' },
+  film: { en: 'A film plays on this screen, but this visitor cannot follow it yet.', fi: 'Tällä näytöllä pyörii elokuva, mutta tämä kävijä ei voi vielä seurata sitä.' },
+  fixFilm: { en: 'Add {what} ({cost}) so they can follow the film.', fi: 'Lisää {what} ({cost}), niin kävijä voi seurata elokuvaa.' },
   fixAdd: { en: 'Add {what} ({cost}) so this visitor can take it in.', fi: 'Lisää {what} ({cost}), niin kävijä voi kokea sen.' },
 }
 const sx = (lang: Lang, k: keyof typeof S, v: Record<string, string | number> = {}) =>
@@ -147,6 +150,19 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
         text: t(d, lang, 'walk_no_info', { zone: zn, exhibits: cap(z.exhibits.join(', ') || unnamed(zn, lang)) }),
         fix: best ? { text: sx(lang, 'fixAdd', { what: [...new Set(best.add.map((p) => p.item))].map(nm).join(' + '), cost: money(lang, best.cost) }), cost: best.cost, items: best.add } : undefined,
       })
+    }
+    // A screen is only usable once something makes its film followable (description, captions, transcript); say so, and what is cheapest for this visitor.
+    if (status !== 'none' && plan.has(SCREEN, z.id)) {
+      const makers = d.items.filter((i) => i.infoValue > 0 && i.requires.some((g) => g.includes(SCREEN)))
+      if (!plan.placements.some((p) => p.at === z.id && makers.some((m) => m.id === p.item) && usable(plan, p.item, p.at, persona, memo))) {
+        let cheapest: { add: Placement[]; cost: number } | null = null
+        for (const m of makers.filter((m) => m.reach === 'all' || persona.attrs[m.reach] === true))
+          for (const add of bundles(plan, { item: m.id, at: z.id })) {
+            const cost = add.length ? new Plan(d, [...placements, ...add], ctx).cost() - plan.cost() : 0
+            if (add.length && (!cheapest || cost < cheapest.cost)) cheapest = { add, cost }
+          }
+        fails.push({ text: sx(lang, 'film'), fix: cheapest ? { text: sx(lang, 'fixFilm', { what: [...new Set(cheapest.add.map((p) => p.item))].map(nm).join(' + '), cost: money(lang, cheapest.cost) }), cost: cheapest.cost, items: cheapest.add } : undefined })
+      }
     }
     for (const x of verdicts) if (!x.v.ok) fails.push(x.v.line)
     if (status === 'full' && r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) { oneWay++; fails.push({ text: t(d, lang, 'walk_one_channel', { zone: zn }) }) }

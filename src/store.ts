@@ -1,7 +1,7 @@
 import { play, type Cue } from './ui/sound'
 import { create } from 'zustand'
 import type { GameData, Item, Level } from './data/load'
-import { Plan, score, type Placement, type VisitContext } from './engine/score'
+import { Plan, score, usable, type Placement, type VisitContext } from './engine/score'
 
 export type Lang = 'en' | 'fi'
 export type Phase = 'planning' | 'visiting' | 'debrief'
@@ -66,6 +66,23 @@ export const isPlaced = (ps: Placement[], item: string, at: string) => ps.some((
 export function canPlace(d: GameData, ps: Placement[], item: string, at: string) {
   if (isPlaced(ps, item, at) || isExisting(d, item, at)) return false
   return spent(d, [...ps, { item, at }]) <= budget(d)
+}
+
+/**
+ * `item@at` → the items that would use it, for placed items that only carry other things (a screen, audio guide devices, Wi-Fi) and have no user yet.
+ * They are not broken, but nobody can use them: a screen with no description, captions or transcript is not accessible.
+ */
+export function waitingMap(d: GameData, ps: Placement[]) {
+  const plan = new Plan(d, ps), m = new Map<string, string[]>()
+  for (const pl of plan.placements) {
+    const it = plan.items.get(pl.item)
+    if (!it || it.infoValue > 0 || it.costEur <= 0 || it.reachGrant) continue // items with value of their own are not just carriers
+    const users = d.items.filter((i) => i.infoValue > 0 && i.requires.some((g) => g.includes(it.id)))
+    if (!users.length) continue
+    const used = plan.placements.some((p) => users.some((u) => u.id === p.item) && (it.scope === 'venue' || p.at === pl.at) && usable(plan, p.item, p.at, null))
+    if (!used) m.set(`${pl.item}@${pl.at}`, users.map((u) => u.id))
+  }
+  return m
 }
 
 /** `item@at` → unmet requirement groups, for placements that are placed but do not work yet. */
