@@ -1,0 +1,37 @@
+import { useEffect, useMemo, useRef } from 'react'
+import type { GameData } from '../data/load'
+import { inactiveMap, itemName, money, needsText, t, targetName, useGame, type Lang } from '../store'
+
+// Click a placed item on the map to read what it is for and what it still needs. Live: the card updates as soon as the missing piece is placed.
+const L = {
+  works: { en: 'Works', fi: 'Toimii' }, wait: { en: 'Not working yet', fi: 'Ei vielä toimi' },
+  needs: { en: 'To work it needs {missing}.', fi: 'Toimiakseen se tarvitsee: {missing}.' },
+  now: { en: '{item} works now.', fi: '{item} toimii nyt.' },
+}
+const say = (lang: Lang, k: keyof typeof L, v: Record<string, string> = {}) => L[k][lang].replace(/\{(\w+)\}/g, (m, n) => v[n] ?? m)
+
+export default function ItemInfo({ d }: { d: GameData }) {
+  const { lang, placements, inspect, setInspect, remove } = useGame()
+  const gaps = useMemo(() => (inspect ? inactiveMap(d, placements).get(`${inspect.item}@${inspect.at}`) : undefined), [d, placements, inspect])
+  const item = inspect ? d.items.find((i) => i.id === inspect.item) : undefined
+  const was = useRef(false) // was it waiting a moment ago? Announce the change when it starts to work.
+  useEffect(() => {
+    if (!item) { was.current = false; return }
+    if (was.current && !gaps) useGame.setState({ announcement: say(lang, 'now', { item: itemName(lang, item) }) })
+    was.current = !!gaps
+  }, [gaps, item, lang])
+  const exists = !!inspect && (placements.some((p) => p.item === inspect.item && p.at === inspect.at) || d.existing.some((e) => e.itemId === inspect.item && e.zoneId === inspect.at))
+  if (!inspect || !item || !exists) return null
+  const close = lang === 'fi' ? 'Sulje' : 'Close'
+  const mine = placements.some((p) => p.item === inspect.item && p.at === inspect.at)
+  return (
+    <section className={`iteminfo ${gaps ? 'wait' : 'ok'}`} role="region" aria-label={itemName(lang, item)} onKeyDown={(e) => e.key === 'Escape' && setInspect(null)}>
+      <button type="button" className="xbtn" aria-label={close} title={close} onClick={() => setInspect(null)}><span aria-hidden="true">✕</span></button>
+      <h3>{itemName(lang, item)}{inspect.at && <span className="note"> · {targetName(d, lang, inspect.at)}</span>}</h3>
+      <p className="status"><span aria-hidden="true">{gaps ? '⚠' : '✓'}</span> {say(lang, gaps ? 'wait' : 'works')}</p>
+      {gaps && <p>{say(lang, 'needs', { missing: needsText(d, lang, gaps) })}</p>}
+      {(lang === 'fi' && item.benefitFi) || item.benefit ? <p><b>{t(d, lang, 'source')}:</b> {(lang === 'fi' && item.benefitFi) || item.benefit}</p> : null}
+      {mine && <button type="button" className="small" onClick={() => { remove({ item: inspect.item, at: inspect.at }); setInspect(null) }}>{t(d, lang, 'remove')} · {money(lang, item.costEur)}</button>}
+    </section>
+  )
+}

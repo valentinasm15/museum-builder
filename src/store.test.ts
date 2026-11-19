@@ -110,3 +110,12 @@ it('rounds are recorded once each, and restart clears the plan and the record', 
   expect(useGame.getState().placements).toEqual([])
   expect(useGame.getState().phase).toBe('planning')
 })
+
+it('the open item card is closed when a new game or the walkthrough starts', () => {
+  s().setInspect({ item: 'audio_description', at: data.zones[0].id })
+  s().openMuseum()
+  expect(s().inspect).toBeNull()
+  s().setInspect({ item: 'audio_description', at: data.zones[0].id })
+  s().restart()
+  expect(s().inspect).toBeNull()
+})

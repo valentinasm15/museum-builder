@@ -73,6 +73,8 @@
       .walk .ok li { color: #1f5d34; } .walk .no li { color: #8e2a1a; } .walk .fix { color: #2b2118; } .walk .st { font-weight: 400; font-size: .9375rem; } .walk .note { font-size: .875rem; margin: 0; }
       .walk-body { flex: 1; min-height: 0; overflow-y: auto; } .walk .intro-nav { flex: none; margin-top: .5rem; } .walk .intro-nav .link { flex: none; } .walk .intro-nav button:not(.link) { flex: 1 1 0; min-width: 0; } /* buttons keep their place from stop to stop */
       @media (max-width: 40rem) { .walk { left: .5rem; right: .5rem; top: auto; bottom: .5rem; width: auto; height: 45vh; } }
+      .iteminfo { position: absolute; top: .5rem; left: .5rem; z-index: 25; width: min(22rem, calc(100% - 1rem)); background: #efe3c8; color: #2b2118; border: 3px solid #8b6b4a; border-left-width: 8px; border-radius: .6rem; padding: .5rem 2.75rem .6rem .9rem; box-shadow: 0 .25rem 1rem rgba(0,0,0,.35); }
+      .iteminfo.ok { border-left-color: #1f5d34; } .iteminfo.wait { border-left-color: #b7791f; } .iteminfo h3 { margin: 0 0 .25rem; font-size: 1rem; } .iteminfo p { margin: .25rem 0; font-size: .9375rem; } .iteminfo .status { font-weight: 700; } .iteminfo.ok .status { color: #1f5d34; } .iteminfo.wait .status { color: #7a4d00; }
       .zmark { margin-left: .25rem; } .elabel.bad { background: #a3001b; }
       .debrief { max-width: 42rem; width: calc(100vw - 1rem); max-height: 92vh; overflow-y: auto; }
       .debrief section { border-top: 2px solid #c9b48c; padding-top: .5rem; margin-top: .75rem; } .debrief h3 { margin: .25rem 0 .5rem; } .debrief h4 { margin: .75rem 0 .25rem; }
@@ -112,7 +114,7 @@
       .zlabel:hover .zname, .zlabel:focus-visible .zname, .zlabel[aria-pressed="true"] .zname, .picking .zname { position: static; width: auto; height: auto; overflow: visible; clip: auto; margin-left: .375rem; }
       .zlabel[aria-pressed="true"] { background: #f2c230; color: #1a1a1a; border-color: #1a1a1a; }
       .elabel { background: #3b2f24; color: #fff; padding: .125rem .6rem; border-radius: .375rem; font-weight: 600; font-size: .85rem; white-space: nowrap; }
-      .elabel.small { font-size: .75rem; padding: 0 .4rem; } .elabel.tip { display: block; white-space: normal; text-align: center; padding: .15rem .5rem; } .elabel.tip.warn { background: #8e2a1a; }
+      .elabel.small { font-size: .75rem; padding: 0 .4rem; }
       .glyph { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; border-radius: .4rem; padding: 0 .3rem; font-size: .95rem; }
       .glyph.warn { background: #fff3cd; color: #7a0016; font-weight: 700; }
       .seg { color: var(--muted); margin-bottom: .25rem; }

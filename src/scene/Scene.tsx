@@ -3,7 +3,8 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { GameData } from '../data/load'
 import { Plan } from '../engine/score'
-import { inactiveMap, itemName, needsText, t, targetName, useGame } from '../store'
+import ItemInfo from '../ui/ItemInfo'
+import { inactiveMap, itemName, t, targetName, useGame } from '../store'
 import { P } from './look'
 import { wallRuns } from './footprint'
 import { ItemBlock, Platform, RouteStrip, Wall, Walker, world } from './Pieces'
@@ -33,7 +34,7 @@ function CanvasLabel({ text }: { text: string }) {
 }
 
 function Room3D({ d, rot }: { d: GameData; rot: number }) {
-  const { lang, placements, selected, focus, setFocus, place } = useGame()
+  const { lang, placements, selected, focus, setFocus, place, inspect, setInspect } = useGame()
   const wv = useGame((s) => s.walkView)
   const W = d.settings.grid_w, H = d.settings.grid_h
   const plan = useMemo(() => new Plan(d, placements), [d, placements])
@@ -47,9 +48,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
     const cols = Math.max(1, Math.floor((w - 0.2) / 0.9))
     return itemsAt(at).map((it, k) => {
       const [px, pz] = world(d, x + 0.6 + (k % cols) * 0.9, y + 0.6 + Math.floor(k / cols) * 0.9)
-      const gaps = missing.get(`${it.id}@${at}`)
-      const label = gaps ? `${itemName(lang, it)}: ${t(d, lang, 'needs_missing', { missing: needsText(d, lang, gaps) })}` : itemName(lang, it)
-      return <ItemBlock key={it.id} item={it} active={!gaps} label={label} pos={[px - w0[0], 0.18, pz - w0[1]]} />
+      return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={() => setInspect({ item: it.id, at })} pos={[px - w0[0], 0.18, pz - w0[1]]} />
     })
   }
   const a = Math.PI / 4 + rot * (Math.PI / 2)
@@ -148,6 +147,7 @@ export default function Scene({ d }: { d: GameData }) {
         <button type="button" onClick={() => zoomBy(1 / 1.2)} aria-label={t(d, lang, 'zoom_out')}>−</button>
         <span className="hint">{t(d, lang, 'scene_keys')}</span>
       </div>
+      <ItemInfo d={d} />
       <Canvas orthographic shadows camera={{ near: 0.1, far: 200, position: [20, 20, 20] }} dpr={[1, 2]}>
         <CanvasLabel text={label} />
         <Rig rot={rot} zoom={zoom} />

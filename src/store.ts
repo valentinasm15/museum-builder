@@ -14,6 +14,7 @@ interface State {
   placements: Placement[]; selected: string | null; announcement: string
   sound: boolean; setSound: (on: boolean) => void // click cues, off by default, remembered in the browser
   visit: Visit; round: number; phase: Phase
+  inspect: { item: string; at: string } | null; setInspect: (i: { item: string; at: string } | null) => void // the placed item whose card is open on the map
   rounds: RoundResult[]; setRound: (r: RoundResult) => void; restart: () => void
   walk: { pid: string; i: number }; setWalk: (w: Partial<{ pid: string; i: number }>) => void
   walkView: WalkView | null; setWalkView: (v: WalkView | null) => void
@@ -128,12 +129,13 @@ export const useGame = create<State>((set, get) => {
   }
   return {
     data: null, base: null, level: '', error: null, lang: 'en', placements: [], selected: null, announcement: '', sound: soundSaved(), focus: null, visit: noVisit, round: 1, phase: 'planning',
+    inspect: null, setInspect: (inspect) => set({ inspect }),
     rounds: [], setRound: (r) => set({ rounds: [...get().rounds.filter((x) => x.n !== r.n), r].sort((a, b) => a.n - b.n) }),
     restart: () => {
       const { base, data, lang } = get()
       if (!base || !data) return
       const visit = drawVisit(base)
-      set({ placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', rounds: [], walkView: null, announcement: drawn(data, lang, visit) })
+      set({ placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', rounds: [], walkView: null, inspect: null, announcement: drawn(data, lang, visit) })
     },
     walk: { pid: '', i: 0 }, setWalk: (w) => set({ walk: { ...get().walk, ...w } }), walkView: null, setWalkView: (walkView) => set({ walkView }),
     setFocus: (focus) => set({ focus }),
@@ -141,7 +143,7 @@ export const useGame = create<State>((set, get) => {
       const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
       set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })
     },
-    openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null, walk: { pid: get().visit.personaId, i: 0 } }) },
+    openMuseum: () => { if (get().data) set({ phase: 'visiting', selected: null, inspect: null, walk: { pid: get().visit.personaId, i: 0 } }) },
     openDebrief: () => set({ phase: 'debrief' }),
     closeVisit: () => set({ phase: 'planning', walkView: null }),
     startRound: (n) => {
