@@ -105,7 +105,7 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
   }))
   const data: GameData = {
     levels, situations, settings: keyValue(wb, 'Settings', 'setting'), scoring: keyValue(wb, 'Scoring', 'parameter'),
-    items, personas, zones, route, floor, features, existing, texts,
+    items, personas, zones: [...zones].sort((a, b) => route.findIndex((s) => s.id === a.routeSegment) - route.findIndex((s) => s.id === b.routeSegment)), route, floor, features, existing, texts,
   }
   validate(data, attrCols)
   return data
