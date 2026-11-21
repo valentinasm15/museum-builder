@@ -1,5 +1,4 @@
 import { Html, RoundedBox } from '@react-three/drei'
-import { useState } from 'react'
 import type { Feature, GameData } from '../data/load'
 import type { Lang } from '../store'
 import { world } from './Pieces'
@@ -116,19 +115,18 @@ function ExitSign() {
 
 const NAMED: Feature['kind'][] = ['lift', 'stairs', 'wc', 'exit', 'feedback']
 
-/** One fixed part of the building. Names appear only on hover or tap, so the map stays about the exhibition; exits always show the universal sign. */
+/** One fixed part of the building. Names are always visible (keyboard and touch users cannot hover); exits also show the universal sign. */
 function Fixture({ d, lang, f }: { d: GameData; lang: Lang; f: Feature }) {
-  const [on, setOn] = useState(false)
   const [x, z] = world(d, f.x + f.w / 2, f.y + f.h / 2)
   const name = (lang === 'fi' && f.nameFi) || f.nameEn
   return (
-    <group position={[x, 0, z]} onPointerOver={(e) => { e.stopPropagation(); setOn(true) }} onPointerOut={() => setOn(false)} onClick={(e) => { e.stopPropagation(); setOn((v) => !v) }}>
+    <group position={[x, 0, z]}>
       <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
-      {NAMED.includes(f.kind) && ( // always mounted, only shown on hover: mounting drei's Html from an event handler breaks React
+      {NAMED.includes(f.kind) && (
         <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
           <div style={{ position: 'relative' }}>
             {f.kind === 'exit' && <ExitSign />}
-            <span className="elabel small" style={{ position: 'absolute', bottom: f.kind === 'exit' ? '100%' : 0, left: '50%', transform: 'translateX(-50%)', visibility: on ? 'visible' : 'hidden', zIndex: 2 }}>{name}</span>
+            <span className="elabel small" style={{ position: 'absolute', bottom: f.kind === 'exit' ? '100%' : 0, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>{name}</span>
           </div>
         </Html>
       )}
