@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { GameData } from '../data/load'
+import { local } from '../engine/feedback'
 import { budget, levelName, money, t, useGame } from '../store'
 
 // Steps 0-1 are the mission and the visitor card; 2-6 point at a part of the screen (6 = the launch button). The highlight is decoration: every step is also plain text.
@@ -59,6 +60,7 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
           <h2 id="intro-h">{t(d, lang, `intro_h${step}`)}</h2>
           {step === 0 && <>
             <p>{t(d, lang, 'intro_goal')}</p>
+            <p>{local(lang, 'roundsNote', { rounds: d.settings.rounds ?? 1 })}</p>
             <fieldset className="levels">
               <legend>{t(d, lang, 'level')}</legend>
               {d.levels.map((l) => (

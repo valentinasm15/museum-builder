@@ -5,7 +5,7 @@ import { bandText, debrief, efficiency, local, nextStep } from '../engine/feedba
 import { money, t, useGame, visitCtx } from '../store'
 
 // Plain headings, lists and text: reads in order with a screen reader, no animation.
-export default function Debrief({ d }: { d: GameData }) {
+export default function Debrief({ d, onRestart }: { d: GameData; onRestart: () => void }) {
   const { lang, placements, visit: v, round, startRound, closeVisit, rounds, setRound, restart } = useGame()
   const ref = useRef<HTMLDialogElement>(null)
   const nextBtn = useRef<HTMLButtonElement>(null)
@@ -96,10 +96,11 @@ export default function Debrief({ d }: { d: GameData }) {
       </section>}
 
       <p className="note">{t(d, lang, 'deb_no_perfect')}</p>
+      {more && <p>{L('keepPlan')}</p>}
       <div className="intro-nav">
         <button type="button" onClick={() => ref.current?.close()}>{close}</button>
         {more ? <button type="button" ref={nextBtn} onClick={nxt}>{t(d, lang, 'next_round')}</button>
-          : <button type="button" ref={nextBtn} onClick={() => { restart(); ref.current?.close() }}>{L('playAgain')}</button>}
+          : <button type="button" ref={nextBtn} onClick={() => { restart(); ref.current?.close(); onRestart() }}>{L('playAgain')}</button>}
       </div>
     </dialog>
   )

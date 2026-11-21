@@ -56,7 +56,7 @@ export default function Room({ d }: { d: GameData }) {
         {block('venue', t(d, lang, 'whole_museum'), '')}
         {d.zones.map((z, n) => block(z.id, `${n + 1}. ${targetName(d, lang, z.id)}`, z.id, z.routeSegment))}
         {d.route.filter((s) => !zoneSegs.has(s.id)).map((s) => (
-          <li key={s.id}><h3>{t(d, lang, 'route_segment')} {s.id}</h3>{segment(s.id)}</li>
+          <li key={s.id}><h3>{targetName(d, lang, s.id)}</h3>{segment(s.id)}</li>
         ))}
       </ul>
     </section>

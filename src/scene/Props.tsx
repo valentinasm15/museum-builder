@@ -1,5 +1,4 @@
 import { Html, RoundedBox } from '@react-three/drei'
-import { useState } from 'react'
 import type { Feature, GameData } from '../data/load'
 import type { Lang } from '../store'
 import { world } from './Pieces'
@@ -116,19 +115,23 @@ function ExitSign() {
 
 const NAMED: Feature['kind'][] = ['lift', 'stairs', 'wc', 'exit', 'feedback']
 
-/** One fixed part of the building. Names appear only on hover or tap, so the map stays about the exhibition; exits always show the universal sign. */
+/** One fixed part of the building. Names are always visible (keyboard and touch users cannot hover); exits also show the universal sign. */
 function Fixture({ d, lang, f }: { d: GameData; lang: Lang; f: Feature }) {
-  const [on, setOn] = useState(false)
   const [x, z] = world(d, f.x + f.w / 2, f.y + f.h / 2)
   const name = (lang === 'fi' && f.nameFi) || f.nameEn
+  // Exits: sign and name sit just outside the building (towards the nearest edge), so they never cover the rooms' labels.
+  const cx = f.x + f.w / 2, cy = f.y + f.h / 2, G = d.settings
+  const edge = [[cx, -1, 0], [G.grid_w - cx, 1, 0], [cy, 0, -1], [G.grid_h - cy, 0, 1]].sort((a, b) => a[0] - b[0])[0]
+  const out: [number, number] = f.kind === 'exit' ? [edge[1] * 1.3, edge[2] * 1.3] : [0, 0]
+  const below = out[0] > 0 || out[1] > 0
   return (
-    <group position={[x, 0, z]} onPointerOver={(e) => { e.stopPropagation(); setOn(true) }} onPointerOut={() => setOn(false)} onClick={(e) => { e.stopPropagation(); setOn((v) => !v) }}>
+    <group position={[x, 0, z]}>
       <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
-      {NAMED.includes(f.kind) && ( // always mounted, only shown on hover: mounting drei's Html from an event handler breaks React
-        <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
+      {NAMED.includes(f.kind) && (
+        <Html position={[out[0], f.kind === 'exit' ? 0.3 : 2.6, out[1]]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
           <div style={{ position: 'relative' }}>
             {f.kind === 'exit' && <ExitSign />}
-            <span className="elabel small" style={{ position: 'absolute', bottom: f.kind === 'exit' ? '100%' : 0, left: '50%', transform: 'translateX(-50%)', visibility: on ? 'visible' : 'hidden', zIndex: 2 }}>{name}</span>
+            <span className="elabel small" style={{ position: 'absolute', ...(f.kind === 'exit' ? (below ? { top: '100%' } : { bottom: '100%' }) : { bottom: 0 }), left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>{name}</span>
           </div>
         </Html>
       )}

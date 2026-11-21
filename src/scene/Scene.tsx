@@ -54,7 +54,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           const [px, pz] = world(d, x + 0.6 + (k % cols) * 1.05, y + 0.6 + Math.floor(k / cols) * 1.05)
           return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
         })}
-        <ItemRow y={[1.3, -h / 2 - 0.3]} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
+        <ItemRow y={[2, -h / 2 - 0.3]} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
       </>
     )
   }
@@ -107,7 +107,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           onPick={() => { if (picked?.scope === 'path') place(picked.id, s.id) }} />
       ))}
       {d.zones.map((z, n) => (
-        <Platform key={z.id} num={n + 1} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
+        <Platform key={z.id} num={n + 1} up={d.zones.some((o) => o !== z && o.w > 4 && o.y >= z.y + z.h && o.y - z.y - z.h < 4 && o.x < z.x + z.w / 2 && z.x + z.w / 2 < o.x + o.w) ? 3 : 0} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
           mark={wv?.marks[z.id]} label={targetName(d, lang, z.id)} hint={picked?.scope === 'zone' ? `${t(d, lang, 'place')} ${itemName(lang, picked)}` : undefined}>
           {blocks(z.id, z.x, z.y, z.w, z.h, world(d, z.x + z.w / 2, z.y + z.h / 2))}
         </Platform>

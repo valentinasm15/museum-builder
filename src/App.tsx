@@ -6,6 +6,7 @@ import Budget from './ui/Budget'
 import Debrief from './ui/Debrief'
 import Catalogue from './ui/Catalogue'
 import Intro from './ui/Intro'
+import Launch from './ui/Launch'
 import Menu from './ui/Menu'
 import Loader from './ui/Loader'
 import Logo from './ui/Logo'
@@ -16,8 +17,8 @@ const sceneChunk = import('./scene/Scene') // start fetching the 3D code at once
 const Scene = lazy(() => sceneChunk)
 
 export default function App() {
-  const { data: d, error, lang, setLang, phase, openMuseum } = useGame()
-  const [intro, setIntro] = useState(true)
+  const { data: d, error, lang, setLang, phase } = useGame()
+  const [intro, setIntro] = useState(true), [launch, setLaunch] = useState(false)
   const [sceneReady, setSceneReady] = useState(false), [loaded, setLoaded] = useState(false)
   useEffect(() => { sceneChunk.then(() => setSceneReady(true), () => setSceneReady(true)) }, [])
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function App() {
         </h1>
         <Budget d={d} />
         <nav className="hud-right">
-          <button type="button" className="submit" onClick={openMuseum}>{t(d, lang, 'open_museum')}</button>
+          <button type="button" className="submit" onClick={() => setLaunch(true)}>{t(d, lang, 'open_museum')}</button>
           <button type="button" className="icon" aria-label={t(d, lang, 'intro_help')} title={t(d, lang, 'intro_help')} onClick={() => setIntro(true)}><span aria-hidden="true" className="q">?</span></button>
           <A11yMenu d={d} />
           <Menu id="lang-panel" label={t(d, lang, 'language')} icon={<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><ellipse cx="12" cy="12" rx="4.2" ry="10" /><path d="M2 12h20M3.5 7h17M3.5 17h17" /></svg>}>
@@ -55,8 +56,9 @@ export default function App() {
         </nav>
       </header>
       <Intro d={d} open={intro} onClose={() => setIntro(false)} />
+      <Launch d={d} open={launch} onClose={() => setLaunch(false)} />
       {phase === 'visiting' && <Visit d={d} />}
-      {phase === 'debrief' && <Debrief d={d} />}
+      {phase === 'debrief' && <Debrief d={d} onRestart={() => setIntro(true)} />}
       <main id="main" tabIndex={-1}>
         <div className="play">
           <Suspense fallback={<p>{t(d, lang, 'loading')}</p>}><Scene d={d} /></Suspense>

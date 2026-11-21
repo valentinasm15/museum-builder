@@ -119,7 +119,7 @@ export function targetName(d: GameData, lang: Lang, at: string) {
   const z = d.zones.find((z) => z.id === at)
   if (z) return (lang === 'fi' && z.nameFi) || z.nameEn
   const s = d.route.find((s) => s.id === at)
-  return s ? `${t(d, lang, 'route_segment')} ${s.id}: ${s.description}` : at
+  return s ? s.description : t(d, lang, 'route_segment')
 }
 
 /** Level shown first: the one whose budget equals Settings.budget_eur, else the first row. */
