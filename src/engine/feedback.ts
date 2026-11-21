@@ -221,7 +221,8 @@ export function nextStep(d: GameData, lang: Lang, placements: Placement[]): stri
     if (gain > 1e-9) opts.push({ add, cost, gain, helped: d.personas.filter((p) => r.personas[p.id] - cur.personas[p.id] > 1e-9).length })
   }
   const bigger = (a: Opt | undefined, b: Opt) => (!a || b.gain > a.gain + 1e-9 || (Math.abs(b.gain - a.gain) <= 1e-9 && b.cost < a.cost) ? b : a) // most gain, then cheapest
-  const top = opts.reduce<Opt | undefined>(bigger, undefined), best = opts.filter((o) => o.cost <= left).reduce<Opt | undefined>(bigger, undefined)
+  const top = opts.filter((o) => o.add.length <= 2).reduce<Opt | undefined>(bigger, undefined) // an unaffordable step is advice only when it is one or two purchases, not a redesign
+  const best = opts.filter((o) => o.cost <= left).reduce<Opt | undefined>(bigger, undefined)
   const what = (o: Opt) => { // zone items with their room, venue items by name, route segments as a count
     const kind = (p: Placement) => d.items.find((i) => i.id === p.item)!.scope
     const part = (p: Placement) => `${name(p.item)}${kind(p) === 'zone' ? `, ${targetName(d, lang, p.at)}` : ''}`
@@ -229,7 +230,7 @@ export function nextStep(d: GameData, lang: Lang, placements: Placement[]): stri
     return [...o.add.filter((p) => kind(p) !== 'path').map(part), ...(routes.length ? [`${name(routes[0].item)}${routes.length > 1 ? ` ×${routes.length}` : ''}`] : [])].join(' + ')
   }
   const buy = (o: Opt) => local(lang, 'nextBuy', { what: what(o), cost: money(lang, o.cost), n: o.helped, total: d.personas.length })
-  if (!top) return local(lang, 'nextNone')
-  if (!best) return local(lang, 'nextShort', { what: what(top), cost: money(lang, top.cost), short: money(lang, top.cost - left) })
-  return best === top ? buy(best) : `${local(lang, 'nextShort', { what: what(top), cost: money(lang, top.cost), short: money(lang, top.cost - left) })} ${buy(best)}`
+  const short = top && top.cost > left ? local(lang, 'nextShort', { what: what(top), cost: money(lang, top.cost), short: money(lang, top.cost - left) }) : ''
+  if (!best) return short || local(lang, 'nextNone')
+  return short && best !== top ? `${short} ${buy(best)}` : buy(best)
 }
