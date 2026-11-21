@@ -11,14 +11,14 @@ export const world = (d: GameData, x: number, y: number): [number, number] => [x
 const HEIGHT: Record<Shape, number> = { box: 0.5, cyl: 0.5, slab: 0.22, panel: 0.6, cone: 0.6 }
 
 /** The symbols of a room's items as one row of real buttons above the room: they never overlap each other or the room name, and keyboard users can reach them. */
-export function ItemRow({ y, items }: { y: [number, number]; items: { id: string; glyph: string; active: boolean; label: string; onInspect: () => void }[] }) {
+export function ItemRow({ y, items, names }: { y: [number, number]; names?: boolean; items: { id: string; glyph: string; active: boolean; label: string; onInspect: () => void }[] }) {
   if (!items.length) return null
   return (
     <Html position={[0, y[0], y[1]]} center zIndexRange={[40, 30]}>
-      <div className="itemrow">
+      <div className={names ? 'itemrow named' : 'itemrow'}>
         {items.map((i) => (
           <button key={i.id} type="button" className={i.active ? 'glyph' : 'glyph warn'} aria-label={i.label} title={i.label} onClick={(e) => { e.stopPropagation(); i.onInspect() }}>
-            <span aria-hidden="true">{i.active ? i.glyph : `⚠ ${i.glyph}`}</span>
+            <span aria-hidden="true">{i.active ? i.glyph : `⚠ ${i.glyph}`}</span>{names && <span className="gname"> {i.label}</span>}
           </button>
         ))}
       </div>
@@ -66,7 +66,7 @@ export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, select
 }
 
 /** Route strip: built = solid yellow with ribs, not built = transparent ghost with outline only. */
-export function RouteStrip({ d, s, built, onPick }: { d: GameData; s: Segment; built: boolean; onPick: () => void }) {
+export function RouteStrip({ d, s, built, selected, onPick }: { d: GameData; s: Segment; built: boolean; selected?: boolean; onPick: () => void }) {
   const dx = Math.abs(s.x2 - s.x1), dz = Math.abs(s.y2 - s.y1), len = dx + dz
   const horiz = dx > 0
   const [cx, cz] = world(d, (s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2)
@@ -74,6 +74,7 @@ export function RouteStrip({ d, s, built, onPick }: { d: GameData; s: Segment; b
   const ribs = built ? Math.floor((len + 0.9) / 0.3) : 0
   return (
     <group position={[cx, 0.03, cz]}>
+      {selected && <mesh position={[0, 0.01, 0]}><boxGeometry args={[size[0] + 0.4, 0.08, size[2] + 0.4]} /><meshStandardMaterial color={P.ring} /></mesh>}
       <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onPick() }}>
         <boxGeometry args={size} />
         <meshStandardMaterial color={P.yellow} transparent={!built} opacity={built ? 1 : 0.2} roughness={0.6} />

@@ -128,3 +128,20 @@ it('screens and other carriers are "waiting" until something placed uses them', 
   expect(waitingMap(data, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: data.zones[0].id }]).has('audio_guide_devices@')).toBe(false)
   expect(waitingMap(data, [{ item: 'staff_training', at: '' }]).has('staff_training@')).toBe(false) // staff training has value of its own
 })
+
+it('multi-place: zone items stay selected after a place; venue items are one-shot; cancel clears', () => {
+  const [a, b] = data.zones.map((z) => z.id)
+  expect(data.items.find((i) => i.id === 'lighting')!.scope).toBe('zone')
+  s().select('lighting')
+  expect(s().place('lighting', a)).toBe(true)
+  expect(s().selected).toBe('lighting')
+  expect(s().place('lighting', a)).toBe(false) // refused: still selected
+  expect(s().selected).toBe('lighting')
+  expect(s().place('lighting', b)).toBe(true)
+  expect(s().placements.map((p) => p.at)).toEqual([a, b])
+  s().select(null)
+  expect(s().selected).toBeNull()
+  s().select('staff_training')
+  expect(s().place('staff_training', '')).toBe(true)
+  expect(s().selected).toBeNull()
+})
