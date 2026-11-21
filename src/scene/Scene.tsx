@@ -107,7 +107,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           onPick={() => { if (picked?.scope === 'path') place(picked.id, s.id) }} />
       ))}
       {d.zones.map((z, n) => (
-        <Platform key={z.id} num={n + 1} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
+        <Platform key={z.id} num={n + 1} up={d.zones.some((o) => o !== z && o.w > 4 && o.y >= z.y + z.h && o.y - z.y - z.h < 4 && o.x < z.x + z.w / 2 && z.x + z.w / 2 < o.x + o.w) ? 3 : 0} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
           mark={wv?.marks[z.id]} label={targetName(d, lang, z.id)} hint={picked?.scope === 'zone' ? `${t(d, lang, 'place')} ${itemName(lang, picked)}` : undefined}>
           {blocks(z.id, z.x, z.y, z.w, z.h, world(d, z.x + z.w / 2, z.y + z.h / 2))}
         </Platform>

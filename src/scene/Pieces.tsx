@@ -45,8 +45,8 @@ export function ItemBlock({ item, pos, active, inspected, onInspect }: { item: I
 }
 
 /** A low platform with a button label (real HTML) and clickable body. Children are positioned relative to its centre. */
-export function Platform({ d, x, y, w, h, label, num, hint, mark, selected, target, onPick, children }: {
-  d: GameData; x: number; y: number; w: number; h: number; label: string; num: string | number; hint?: string; mark?: { icon: string; text: string }; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
+export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, selected, target, onPick, children }: {
+  d: GameData; x: number; y: number; w: number; h: number; up?: number; label: string; num: string | number; hint?: string; mark?: { icon: string; text: string }; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
 }) {
   const [cx, cz] = world(d, x + w / 2, y + h / 2)
   return (
@@ -58,7 +58,7 @@ export function Platform({ d, x, y, w, h, label, num, hint, mark, selected, targ
         <meshStandardMaterial color={P.wood} roughness={0.8} />
       </RoundedBox>
       {children}
-      <Html position={[w > 4 ? 0 : w / 2 - 0.2, 0.9, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
+      <Html position={[w > 4 ? 0 : w / 2 - 0.2, 0.9 + up, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
         <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button>
       </Html>
     </group>
