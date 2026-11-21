@@ -74,7 +74,7 @@ export function RouteStrip({ d, s, built, selected, onPick }: { d: GameData; s: 
   const ribs = built ? Math.floor((len + 0.9) / 0.3) : 0
   return (
     <group position={[cx, 0.03, cz]}>
-      {selected && <mesh position={[0, 0.01, 0]}><boxGeometry args={[size[0] + 0.4, 0.08, size[2] + 0.4]} /><meshStandardMaterial color={P.ring} /></mesh>}
+      {selected && <mesh position={[0, -0.005, 0]}><boxGeometry args={[size[0] + 0.4, 0.05, size[2] + 0.4]} /><meshStandardMaterial color={P.base} /></mesh>}
       <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onPick() }}>
         <boxGeometry args={size} />
         <meshStandardMaterial color={P.yellow} transparent={!built} opacity={built ? 1 : 0.2} roughness={0.6} />
