@@ -147,9 +147,26 @@ export default function Scene({ d }: { d: GameData }) {
       else if (k === '+' || k === '=') zoomBy(1.2)
       else if (k === '-' || k === '_') zoomBy(1 / 1.2)
     }
+    // Two-finger pinch zooms the map (the + / − buttons and keys remain the non-gesture way).
+    const pts = new Map<number, [number, number]>()
+    const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]) }
+    const down = (e: PointerEvent) => { if (e.pointerType === 'touch') pts.set(e.pointerId, [e.clientX, e.clientY]) }
+    const move = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return
+      const before = pts.size === 2 ? dist() : 0
+      pts.set(e.pointerId, [e.clientX, e.clientY])
+      if (before > 0) zoomBy(dist() / before)
+    }
+    const up = (e: PointerEvent) => { pts.delete(e.pointerId) }
     el?.addEventListener('wheel', onWheel, { passive: false })
+    el?.addEventListener('pointerdown', down); el?.addEventListener('pointermove', move)
+    el?.addEventListener('pointerup', up); el?.addEventListener('pointercancel', up)
     window.addEventListener('keydown', onKey)
-    return () => { el?.removeEventListener('wheel', onWheel); window.removeEventListener('keydown', onKey) }
+    return () => {
+      el?.removeEventListener('wheel', onWheel); window.removeEventListener('keydown', onKey)
+      el?.removeEventListener('pointerdown', down); el?.removeEventListener('pointermove', move)
+      el?.removeEventListener('pointerup', up); el?.removeEventListener('pointercancel', up)
+    }
   }, [])
   const label = t(d, lang, 'scene_label')
   return (
