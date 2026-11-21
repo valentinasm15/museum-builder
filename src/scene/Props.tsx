@@ -123,7 +123,7 @@ function Fixture({ d, lang, f }: { d: GameData; lang: Lang; f: Feature }) {
     <group position={[x, 0, z]}>
       <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
       {NAMED.includes(f.kind) && (
-        <Html position={[0, 1.9, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
+        <Html position={[0, 2.6, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
           <div style={{ position: 'relative' }}>
             {f.kind === 'exit' && <ExitSign />}
             <span className="elabel small" style={{ position: 'absolute', bottom: f.kind === 'exit' ? '100%' : 0, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>{name}</span>
