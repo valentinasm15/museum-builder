@@ -119,14 +119,19 @@ const NAMED: Feature['kind'][] = ['lift', 'stairs', 'wc', 'exit', 'feedback']
 function Fixture({ d, lang, f }: { d: GameData; lang: Lang; f: Feature }) {
   const [x, z] = world(d, f.x + f.w / 2, f.y + f.h / 2)
   const name = (lang === 'fi' && f.nameFi) || f.nameEn
+  // Exits: sign and name sit just outside the building (towards the nearest edge), so they never cover the rooms' labels.
+  const cx = f.x + f.w / 2, cy = f.y + f.h / 2, G = d.settings
+  const edge = [[cx, -1, 0], [G.grid_w - cx, 1, 0], [cy, 0, -1], [G.grid_h - cy, 0, 1]].sort((a, b) => a[0] - b[0])[0]
+  const out: [number, number] = f.kind === 'exit' ? [edge[1] * 1.3, edge[2] * 1.3] : [0, 0]
+  const below = out[0] > 0 || out[1] > 0
   return (
     <group position={[x, 0, z]}>
       <Prop f={f} turn={f.kind === 'display' ? wallTurn(d, f) : 0} />
       {NAMED.includes(f.kind) && (
-        <Html position={[0, 2.6, 0]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
+        <Html position={[out[0], f.kind === 'exit' ? 0.3 : 2.6, out[1]]} center zIndexRange={[4, 0]} style={{ pointerEvents: 'none' }}>
           <div style={{ position: 'relative' }}>
             {f.kind === 'exit' && <ExitSign />}
-            <span className="elabel small" style={{ position: 'absolute', bottom: f.kind === 'exit' ? '100%' : 0, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>{name}</span>
+            <span className="elabel small" style={{ position: 'absolute', ...(f.kind === 'exit' ? (below ? { top: '100%' } : { bottom: '100%' }) : { bottom: 0 }), left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>{name}</span>
           </div>
         </Html>
       )}

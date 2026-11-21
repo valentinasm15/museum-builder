@@ -58,7 +58,7 @@ export function Platform({ d, x, y, w, h, label, num, hint, mark, selected, targ
         <meshStandardMaterial color={P.wood} roughness={0.8} />
       </RoundedBox>
       {children}
-      <Html position={[w / 2 - 0.2, 0.9, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
+      <Html position={[w > 4 ? 0 : w / 2 - 0.2, 0.9, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
         <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button>
       </Html>
     </group>
