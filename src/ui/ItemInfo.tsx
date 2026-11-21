@@ -21,6 +21,12 @@ export default function ItemInfo({ d }: { d: GameData }) {
     if (was.current && !gaps && !users) useGame.setState({ announcement: say(lang, 'now', { item: itemName(lang, item) }) })
     was.current = !!gaps || !!users
   }, [gaps, users, item, lang])
+  useEffect(() => { // Escape closes the card even when focus is still on the glyph that opened it (outside the card)
+    if (!inspect) return
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setInspect(null) }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [inspect, setInspect])
   const exists = !!inspect && (placements.some((p) => p.item === inspect.item && p.at === inspect.at) || d.existing.some((e) => e.itemId === inspect.item && e.zoneId === inspect.at))
   if (!inspect || !item || !exists) return null
   const close = lang === 'fi' ? 'Sulje' : 'Close'

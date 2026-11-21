@@ -10,7 +10,6 @@ import Launch from './ui/Launch'
 import Menu from './ui/Menu'
 import Loader from './ui/Loader'
 import Logo from './ui/Logo'
-import Room from './ui/Room'
 import Visit from './ui/Visit'
 
 const sceneChunk = import('./scene/Scene') // start fetching the 3D code at once, so the loader covers it too
@@ -64,7 +63,6 @@ export default function App() {
           <Suspense fallback={<p>{t(d, lang, 'loading')}</p>}><Scene d={d} /></Suspense>
           <Catalogue d={d} />
         </div>
-        <Room d={d} />
       </main>
     </>
   )

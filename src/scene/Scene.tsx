@@ -45,8 +45,8 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
     [...d.existing.filter((e) => e.zoneId === at).map((e) => e.itemId), ...placements.filter((p) => p.at === at).map((p) => p.item)]
       .map((id) => d.items.find((i) => i.id === id)!)
       .filter((i) => i.scope !== 'path' && i.costEur > 0) // zero-cost existing items are baseline, not objects
-  const blocks = (at: string, x: number, y: number, w: number, h: number, w0: [number, number]) => {
-    const cols = Math.max(1, Math.floor((w - 0.2) / 1.05)), here = itemsAt(at)
+  const blocks = (at: string, x: number, y: number, w: number, h: number, w0: [number, number], pick: (i: Item) => boolean = () => true, names = false) => {
+    const cols = Math.max(1, Math.floor((w - 0.2) / 1.05)), here = itemsAt(at).filter(pick)
     const open = (it: Item) => () => setInspect({ item: it.id, at })
     return (
       <>
@@ -54,7 +54,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           const [px, pz] = world(d, x + 0.6 + (k % cols) * 1.05, y + 0.6 + Math.floor(k / cols) * 1.05)
           return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
         })}
-        <ItemRow y={[2, -h / 2 - 0.3]} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
+        <ItemRow y={[names ? 1.8 : 2, -h / 2 - 0.3]} names={names} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
       </>
     )
   }
@@ -71,8 +71,11 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
     }
     return new Float32Array(v)
   }, [d, W, H])
-  const vx = d.settings.entrance_x + 2, vy = d.settings.entrance_y - 3.4, vw = W - 1 - vx, vh = 2.4
-  const [vcx, vcz] = world(d, vx + vw / 2, vy + vh / 2)
+  // Entrance items (moment = entrance) sit next to the Entrance label; other venue items go on the Whole museum pad further right.
+  const ew = 3.6, evx = d.settings.entrance_x + 1.2, vy = d.settings.entrance_y - 3.4, vh = 2.4
+  const vx = evx + ew + 0.8, vw = W - 1 - vx
+  const [ecx, ecz] = world(d, evx + ew / 2, vy + vh / 2), [vcx, vcz] = world(d, vx + vw / 2, vy + vh / 2)
+  const atEntrance = (i: Item) => i.moment === 'entrance'
 
   const pickZone = (id: string) => {
     if (picked?.scope === 'zone' && place(picked.id, id)) setFocus(id)
@@ -104,7 +107,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
 
       {d.route.map((s) => (
         <RouteStrip key={s.id} d={d} s={s} built={plan.segmentExists(s.id)}
-          onPick={() => { if (picked?.scope === 'path') place(picked.id, s.id) }} />
+          selected={focus === s.id} onPick={() => { if (picked?.scope === 'path') place(picked.id, s.id); else setFocus(focus === s.id ? null : s.id) }} />
       ))}
       {d.zones.map((z, n) => (
         <Platform key={z.id} num={n + 1} up={d.zones.some((o) => o !== z && o.w > 4 && o.y >= z.y + z.h && o.y - z.y - z.h < 4 && o.x < z.x + z.w / 2 && z.x + z.w / 2 < o.x + o.w) ? 3 : 0} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
@@ -113,9 +116,13 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
         </Platform>
       ))}
       {wv && <Walker d={d} path={wv.path} barrier={wv.barrier} />}
+      <Platform num="⌂" d={d} x={evx} y={vy} w={ew} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
+        label={t(d, lang, 'entrance_items')}>
+        {blocks('', evx, vy, ew, vh, [ecx, ecz], atEntrance, true)}
+      </Platform>
       <Platform num="⌂" d={d} x={vx} y={vy} w={vw} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
         label={t(d, lang, 'whole_museum')}>
-        {blocks('', vx, vy, vw, vh, [vcx, vcz])}
+        {blocks('', vx, vy, vw, vh, [vcx, vcz], (i) => !atEntrance(i), true)}
       </Platform>
     </>
   )
@@ -140,9 +147,26 @@ export default function Scene({ d }: { d: GameData }) {
       else if (k === '+' || k === '=') zoomBy(1.2)
       else if (k === '-' || k === '_') zoomBy(1 / 1.2)
     }
+    // Two-finger pinch zooms the map (the + / − buttons and keys remain the non-gesture way).
+    const pts = new Map<number, [number, number]>()
+    const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]) }
+    const down = (e: PointerEvent) => { if (e.pointerType === 'touch') pts.set(e.pointerId, [e.clientX, e.clientY]) }
+    const move = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return
+      const before = pts.size === 2 ? dist() : 0
+      pts.set(e.pointerId, [e.clientX, e.clientY])
+      if (before > 0) zoomBy(dist() / before)
+    }
+    const up = (e: PointerEvent) => { pts.delete(e.pointerId) }
     el?.addEventListener('wheel', onWheel, { passive: false })
+    el?.addEventListener('pointerdown', down); el?.addEventListener('pointermove', move)
+    el?.addEventListener('pointerup', up); el?.addEventListener('pointercancel', up)
     window.addEventListener('keydown', onKey)
-    return () => { el?.removeEventListener('wheel', onWheel); window.removeEventListener('keydown', onKey) }
+    return () => {
+      el?.removeEventListener('wheel', onWheel); window.removeEventListener('keydown', onKey)
+      el?.removeEventListener('pointerdown', down); el?.removeEventListener('pointermove', move)
+      el?.removeEventListener('pointerup', up); el?.removeEventListener('pointercancel', up)
+    }
   }, [])
   const label = t(d, lang, 'scene_label')
   return (

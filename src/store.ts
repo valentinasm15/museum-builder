@@ -112,6 +112,8 @@ export function needsText(d: GameData, lang: Lang, groups: string[][]) {
   }
   return groups.map((g) => g.map(word).join(` ${t(d, lang, 'or')} `)).join(`; ${t(d, lang, 'and')} `)
 }
+/** Items that list this one in `requires`: what placing it makes possible. */
+export const enables = (d: GameData, id: string) => d.items.filter((i) => i.requires.some((g) => g.includes(id)))
 export const helpsText = (d: GameData, lang: Lang, i: Item) =>
   i.reach === 'all' ? t(d, lang, 'everyone') : t(d, lang, `attr_${i.reach}`)
 export function targetName(d: GameData, lang: Lang, at: string) {
@@ -195,7 +197,8 @@ export const useGame = create<State>((set, get) => {
     place: (item, at) => {
       const { data: d, placements } = get()
       if (!d || !canPlace(d, placements, item, at)) { cue('refused'); return false }
-      set({ placements: [...placements, { item, at }], selected: null })
+      const scope = d.items.find((i) => i.id === item)?.scope
+      set({ placements: [...placements, { item, at }], selected: scope === 'venue' ? null : get().selected }) // zone/path items stay selected for the next target; Cancel clears
       cue('placed'); say('announce_placed', item, at)
       return true
     },
