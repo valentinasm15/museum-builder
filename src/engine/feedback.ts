@@ -53,7 +53,6 @@ const LOCAL = {
   roundLine: { en: 'Round {n}: {visitor}. For this visitor: {focal}. Whole museum: {overall}.', fi: 'Kierros {n}: {visitor}. Tälle kävijälle: {focal}. Koko museo: {overall}.' },
   playAgain: { en: 'Start Over', fi: 'Aloita alusta' },
   launchH: { en: 'Open the museum?', fi: 'Avataanko museo?' },
-  launchEmpty: { en: 'Launch with nothing placed?', fi: 'Avataanko museo ilman yhtään kohdetta?' },
   launchSummary: { en: 'Spent {spent} of {budget}. Items placed: {n}.', fi: 'Käytetty {spent} / {budget}. Sijoitettuja kohteita: {n}.' },
   launchInactive: { en: 'Placed but not working yet:', fi: 'Sijoitettu, mutta ei vielä toimi:' },
   launchWaiting: { en: 'Placed but unused by anything yet:', fi: 'Sijoitettu, mutta mikään ei käytä vielä:' },

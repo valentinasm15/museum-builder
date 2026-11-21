@@ -13,7 +13,7 @@ export default function Launch({ d, open, onClose }: { d: GameData; open: boolea
     if (open && el && !el.open) { el.showModal(); go.current?.focus({ preventScroll: true }) }
     if (!open && el?.open) el.close()
   }, [open])
-  const sp = spent(d, placements), empty = placements.length === 0
+  const sp = spent(d, placements)
   const name = (k: string) => {
     const [item, at] = k.split('@'), it = d.items.find((i) => i.id === item)
     return `${it ? itemName(lang, it) : item}, ${targetName(d, lang, at)}`
@@ -23,7 +23,6 @@ export default function Launch({ d, open, onClose }: { d: GameData; open: boolea
   return (
     <dialog ref={ref} className="intro" aria-labelledby="launch-h" onClose={onClose}>
       <h2 id="launch-h">{L('launchH')}</h2>
-      {empty && <p><strong>{L('launchEmpty')}</strong></p>}
       <p>{L('launchSummary', { spent: money(lang, sp), budget: money(lang, budget(d)), n: placements.length })}</p>
       {bad.length > 0 && <><p>{L('launchInactive')}</p><ul>{bad.map((k) => <li key={k}>{name(k)}</li>)}</ul></>}
       {idle.length > 0 && <><p>{L('launchWaiting')}</p><ul>{idle.map((k) => <li key={k}>{name(k)}</li>)}</ul></>}
