@@ -116,6 +116,7 @@
       .zlabel[aria-pressed="true"] { background: #f2c230; color: #1a1a1a; border-color: #1a1a1a; }
       .elabel { background: #3b2f24; color: #fff; padding: .125rem .6rem; border-radius: .375rem; font-weight: 600; font-size: .85rem; white-space: nowrap; }
       .elabel.small { font-size: .8125rem; line-height: 1.25; padding: 0 .4rem; border: 1px solid #fff; background: #1f1812; } /* opaque, ~16:1 text and visible edge (WCAG 1.4.3, 1.4.11); sits under zone labels (z-index in Props.tsx) */
+      @media (max-width: 40rem) { .zlabel { font-size: .6875rem; padding: 0 .25rem; } .zname { margin-left: .2rem; } .elabel, .elabel.small { font-size: .625rem; } } /* phones: smaller map labels (tap targets stay >= 24px via min-height) */
       .glyph { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; border-radius: .4rem; padding: 0 .3rem; font: inherit; font-size: .85rem; line-height: 1.3; cursor: pointer; min-height: 0; } .itemrow { display: flex; flex-wrap: wrap; justify-content: center; gap: .125rem; width: max-content; max-width: 9rem; } .glyph:focus-visible { outline: 3px solid #0b57d0; outline-offset: 1px; }
       .glyph.warn { background: #fff3cd; color: #7a0016; font-weight: 700; }
       .seg { color: var(--muted); margin-bottom: .25rem; }
