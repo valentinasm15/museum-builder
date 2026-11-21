@@ -54,7 +54,7 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           const [px, pz] = world(d, x + 0.6 + (k % cols) * 1.05, y + 0.6 + Math.floor(k / cols) * 1.05)
           return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
         })}
-        <ItemRow y={[2, -h / 2 - 0.3]} names={names} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
+        <ItemRow y={[names ? 1.8 : 2, -h / 2 - 0.3]} names={names} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
       </>
     )
   }

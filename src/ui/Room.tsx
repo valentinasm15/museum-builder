@@ -7,7 +7,7 @@ export default function Room({ d }: { d: GameData }) {
   const { lang, placements, remove, focus, setFocus } = useGame()
   const missing = useMemo(() => inactiveMap(d, placements), [d, placements])
   const waiting = useMemo(() => waitingMap(d, placements), [d, placements])
-  const all: Placement[] = [...d.existing.map((e) => ({ item: e.itemId, at: e.zoneId })), ...placements]
+  const all: Placement[] = [...d.existing.map((e) => ({ item: e.itemId, at: e.zoneId })), ...placements].filter((p) => (d.items.find((i) => i.id === p.item)?.costEur ?? 0) > 0) // zero-cost existing items are baseline, as on the map
   const route = d.items.find((i) => i.scope === 'path')
 
   const entry = (p: Placement) => {
