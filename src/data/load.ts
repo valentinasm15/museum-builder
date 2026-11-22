@@ -15,7 +15,7 @@ export interface Persona {
 }
 export interface Zone {
   id: string; nameEn: string; nameFi: string; hasScreen: boolean
-  exhibitObjects: number; routeSegment: string; exhibits: string[]
+  exhibitObjects: number; routeSegment: string; exhibits: string[]; about: string; aboutFi: string
   x: number; y: number; w: number; h: number // grid tiles
 }
 export interface Rect { id: string; x: number; y: number; w: number; h: number }
@@ -81,7 +81,7 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
     x: num(r.x, 'Zones', 'x'), y: num(r.y, 'Zones', 'y'), w: num(r.w, 'Zones', 'w'), h: num(r.h, 'Zones', 'h'),
     id: str(r.id), nameEn: str(r.name_en), nameFi: str(r.name_fi), hasScreen: bool(r.has_screen),
     exhibitObjects: num(r.exhibit_objects, 'Zones', 'exhibit_objects', 0), routeSegment: str(r.route_segment),
-    exhibits: list(r["exhibits (names, ';'-separated)"], ';'),
+    exhibits: list(r["exhibits (names, ';'-separated)"], ';'), about: str(r.about_en), aboutFi: str(r.about_fi),
   }))
   const route = sheet(wb, 'Route', ['segment_id', 'from', 'description', 'existing', 'x1', 'y1', 'x2', 'y2']).map((r): Segment => ({
     x1: num(r.x1, 'Route', 'x1'), y1: num(r.y1, 'Route', 'y1'), x2: num(r.x2, 'Route', 'x2'), y2: num(r.y2, 'Route', 'y2'),

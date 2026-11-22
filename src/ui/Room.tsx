@@ -40,9 +40,11 @@ export default function Room({ d }: { d: GameData }) {
   const block = (key: string, title: string, at: string, seg?: string) => {
     const here = all.filter((p) => p.at === at)
     const sel = focus === key
+    const zone = d.zones.find((x) => x.id === at), about = zone && ((lang === 'fi' && zone.aboutFi) || zone.about)
     return (
       <li key={key} id={`room-${key}`} className={sel ? 'sel' : undefined}>
         <h3><button type="button" className="link" aria-pressed={sel} onClick={() => setFocus(sel ? null : key)}>{title}</button></h3>
+        {about && <p className="about">{about}</p>}
         {seg && segment(seg)}
         {at !== seg && (here.length ? <ul>{here.map(entry)}</ul> : <p>{t(d, lang, 'nothing_placed')}</p>)}
       </li>
