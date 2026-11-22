@@ -53,6 +53,7 @@ export default function Room({ d }: { d: GameData }) {
   return (
     <section aria-labelledby="room-h" className="roomtab">
       <h2 id="room-h" className="sr" tabIndex={-1}>{t(d, lang, 'room_view')}</h2>
+      <p className="hint">{t(d, lang, 'room_hint')}</p>
       <ul className="room">
         {block('venue', t(d, lang, 'whole_museum'), '')}
         {d.route.map((s) => {
