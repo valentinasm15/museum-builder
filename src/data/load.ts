@@ -15,13 +15,13 @@ export interface Persona {
 }
 export interface Zone {
   id: string; nameEn: string; nameFi: string; hasScreen: boolean
-  exhibitObjects: number; routeSegment: string; exhibits: string[]
+  exhibitObjects: number; routeSegment: string; exhibits: string[]; about: string; aboutFi: string
   x: number; y: number; w: number; h: number // grid tiles
 }
 export interface Rect { id: string; x: number; y: number; w: number; h: number }
 export type FeatureKind = 'display' | 'lift' | 'stairs' | 'exit' | 'wc' | 'feedback' | 'column' | 'car' | 'booth'
 export interface Feature extends Rect { kind: FeatureKind; nameEn: string; nameFi: string }
-export interface Segment { id: string; from: string; description: string; existing: boolean; x1: number; y1: number; x2: number; y2: number }
+export interface Segment { id: string; from: string; description: string; descriptionFi: string; existing: boolean; x1: number; y1: number; x2: number; y2: number }
 export interface Existing { itemId: string; zoneId: string }
 export interface Situation { id: string; name: string; nameFi: string; hasMuseumDevice: boolean; phoneWorks: boolean; staffAvailable: boolean }
 export interface Level { id: string; name: string; nameFi: string; budgetEur: number }
@@ -81,11 +81,11 @@ export function parseWorkbook(wb: XLSX.WorkBook): GameData {
     x: num(r.x, 'Zones', 'x'), y: num(r.y, 'Zones', 'y'), w: num(r.w, 'Zones', 'w'), h: num(r.h, 'Zones', 'h'),
     id: str(r.id), nameEn: str(r.name_en), nameFi: str(r.name_fi), hasScreen: bool(r.has_screen),
     exhibitObjects: num(r.exhibit_objects, 'Zones', 'exhibit_objects', 0), routeSegment: str(r.route_segment),
-    exhibits: list(r["exhibits (names, ';'-separated)"], ';'),
+    exhibits: list(r["exhibits (names, ';'-separated)"], ';'), about: str(r.about_en), aboutFi: str(r.about_fi),
   }))
   const route = sheet(wb, 'Route', ['segment_id', 'from', 'description', 'existing', 'x1', 'y1', 'x2', 'y2']).map((r): Segment => ({
     x1: num(r.x1, 'Route', 'x1'), y1: num(r.y1, 'Route', 'y1'), x2: num(r.x2, 'Route', 'x2'), y2: num(r.y2, 'Route', 'y2'),
-    id: str(r.segment_id), from: str(r.from), description: str(r.description), existing: bool(r.existing),
+    id: str(r.segment_id), from: str(r.from), description: str(r.description), descriptionFi: r.description_fi ? str(r.description_fi) : '', existing: bool(r.existing),
   }))
   const rect = (r: Row, sh: string) => ({
     id: str(r.id), x: num(r.x, sh, 'x'), y: num(r.y, sh, 'y'), w: num(r.w, sh, 'w'), h: num(r.h, sh, 'h'),

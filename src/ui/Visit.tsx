@@ -44,6 +44,7 @@ export default function Visit({ d }: { d: GameData }) {
   useEffect(() => () => { setWalkView(null); setFocus(null) }, [setWalkView, setFocus])
   useEffect(() => { next.current?.focus({ preventScroll: true }) }, [])
 
+  const zone = d.zones.find((z) => z.id === s.zoneId), about = zone && ((lang === 'fi' && zone.aboutFi) || zone.about)
   const names = (ids?: string[]) => (ids ?? []).map((id) => itemName(lang, d.items.find((x) => x.id === id)!)).join(', ')
   const close = lang === 'fi' ? 'Sulje' : 'Close'
   return (
@@ -53,6 +54,7 @@ export default function Visit({ d }: { d: GameData }) {
       <div className="walk-body">
       <div role="status" aria-live="polite">
         <h2 id="walk-h"><span aria-hidden="true">{ICON[s.status]}</span> {s.name} {s.kind !== 'exit' && <span className="st">· {word(lang, s.status)}</span>}</h2>
+        {about && <><h3>{t(d, lang, 'about_room')}</h3><p>{about}</p></>}
         {s.notes.length > 0 && <><h3>{word(lang, 'across')}</h3><ul>{s.notes.map((n, k) => <li key={k}>{n}</li>)}</ul></>}
         {s.works.length > 0 && <><h3>{word(lang, 'works')}</h3><ul className="ok">{s.works.map((w, k) => <li key={k}>✓ {w.text}{w.via?.length ? <span className="note"> ({word(lang, 'via', { items: names(w.via) })})</span> : null}</li>)}</ul></>}
         {s.fails.length > 0 && <><h3>{word(lang, 'fails')}</h3><ul className="no">

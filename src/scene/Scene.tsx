@@ -118,11 +118,11 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
       {wv && <Walker d={d} path={wv.path} barrier={wv.barrier} />}
       <Platform num="⌂" d={d} x={evx} y={vy} w={ew} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
         label={t(d, lang, 'entrance_items')}>
-        {blocks('', evx, vy, ew, vh, [ecx, ecz], atEntrance, true)}
+        {blocks('', evx, vy, ew, vh, [ecx, ecz], atEntrance)}
       </Platform>
       <Platform num="⌂" d={d} x={vx} y={vy} w={vw} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
         label={t(d, lang, 'whole_museum')}>
-        {blocks('', vx, vy, vw, vh, [vcx, vcz], (i) => !atEntrance(i), true)}
+        {blocks('', vx, vy, vw, vh, [vcx, vcz], (i) => !atEntrance(i))}
       </Platform>
     </>
   )
