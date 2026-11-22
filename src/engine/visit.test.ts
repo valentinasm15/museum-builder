@@ -1,11 +1,18 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { loadData } from '../data/load'
+import { loadData, type GameData } from '../data/load'
 import { Plan, score } from './score'
 import { stops, visit } from './visit'
 import { t } from '../store'
 
-const d = loadData(readFileSync('src/data/museum-builder-data.xlsx'))
+// Test-only variants (visitorShare 0): the shipped workbook has 4 personas, but these engine rules still need covering.
+const withVariants = (g: GameData): GameData => {
+  const by = (id: string) => g.personas.find((p) => p.id === id)!
+  const mk = (id: string, from: string, attrs: Record<string, boolean>) => ({ ...by(from), id, visitorShare: 0, attrs: { ...by(from).attrs, ...attrs } })
+  return { ...g, personas: [...g.personas, mk('low_vision_with_touch', 'low_vision_central', { comfortableWithTouch: true, needsMagnification: false }), mk('low_vision_glare', 'low_vision_central', { glareSensitive: true, needsMagnification: false }),
+    mk('low_vision_no_smartphone', 'low_vision_central', { usesSmartphone: false }), mk('blind_no_smartphone', 'blind_non_braille', { usesSmartphone: false })] }
+}
+const d = withVariants(loadData(readFileSync('src/data/museum-builder-data.xlsx')))
 const noPhone = d.personas.find((p) => !p.attrs.usesSmartphone && !p.attrs.needsContinuousRoute)!
 const hasKey = (ev: ReturnType<typeof visit>, key: string) => ev.some((e) => e.key === key)
 const off = new Plan(d, []) // route-less zone: not reachable by route today

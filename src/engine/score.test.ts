@@ -5,7 +5,14 @@ import { loadData, parseWorkbook, type GameData } from '../data/load'
 import { benchmark, bundles, moneyEfficiency } from './benchmark'
 import { Plan, score, usable, type Placement, type VisitContext } from './score'
 
-const data = loadData(readFileSync('src/data/museum-builder-data.xlsx'))
+// Test-only variants (visitorShare 0): the shipped workbook has 4 personas, but these engine rules still need covering.
+const withVariants = (g: GameData): GameData => {
+  const by = (id: string) => g.personas.find((p) => p.id === id)!
+  const mk = (id: string, from: string, attrs: Record<string, boolean>) => ({ ...by(from), id, visitorShare: 0, attrs: { ...by(from).attrs, ...attrs } })
+  return { ...g, personas: [...g.personas, mk('low_vision_with_touch', 'low_vision_central', { comfortableWithTouch: true, needsMagnification: false }), mk('low_vision_glare', 'low_vision_central', { glareSensitive: true, needsMagnification: false }),
+    mk('low_vision_no_smartphone', 'low_vision_central', { usesSmartphone: false }), mk('blind_no_smartphone', 'blind_non_braille', { usesSmartphone: false })] }
+}
+const data = withVariants(loadData(readFileSync('src/data/museum-builder-data.xlsx')))
 const Z = 'viestinta' // route segment s1 exists today
 const P = { nb: 'blind_non_braille', br: 'blind_braille', lv: 'low_vision_central', lw: 'low_vision_with_touch', tun: 'low_vision_tunnel', gl: 'low_vision_glare', nph: 'low_vision_no_smartphone', bns: 'blind_no_smartphone' }
 const at = (item: string, where = Z): Placement => ({ item, at: where })

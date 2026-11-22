@@ -49,9 +49,7 @@ export default function Visit({ d }: { d: GameData }) {
   return (
     <section className="walk" role="region" aria-labelledby="walk-h" onKeyDown={(e) => e.key === 'Escape' && closeVisit()}>
       <button type="button" className="xbtn" aria-label={close} title={close} onClick={closeVisit}><span aria-hidden="true">✕</span></button>
-      <p className="note">{word(lang, 'stop', { n: i + 1, total: list.length })} · <label>{word(lang, 'visitor')}:{' '}
-        <select value={persona.id} onChange={(e) => setWalk({ pid: e.target.value, i: 0 })}>{d.personas.map((p) => <option key={p.id} value={p.id}>{pname(p)}</option>)}</select>
-      </label></p>
+      <p className="note">{word(lang, 'stop', { n: i + 1, total: list.length })} · {word(lang, 'visitor')}: {pname(persona)}</p>
       <div className="walk-body">
       <div role="status" aria-live="polite">
         <h2 id="walk-h"><span aria-hidden="true">{ICON[s.status]}</span> {s.name} {s.kind !== 'exit' && <span className="st">· {word(lang, s.status)}</span>}</h2>
