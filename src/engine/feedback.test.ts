@@ -81,13 +81,11 @@ it('debrief page data: a room status per zone, verdict counts, gap and a next st
   }
 }, 60000)
 
-it('an enabler bought without content is idle, not the "weakest buy"; with content it is not idle', () => {
+it('the audio guide has value of its own (general guide): not idle alone, and counted among the buys', () => {
   const z = d.zones[0].id
   const alone = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'large_print_label', at: z }], v('with_audio_guide'), 'en')
-  expect(alone.idle).toHaveLength(1)
-  expect(alone.idle[0].cost).toBe(cost('audio_guide_devices'))
-  expect(alone.idle[0].text).toMatch(/waiting/)
-  expect(alone.values.some((s) => /Audio guide/.test(s))).toBe(false)
+  expect(alone.idle).toHaveLength(0)
+  expect(alone.values.some((s) => /Audio guide/.test(s))).toBe(true)
   const used = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: z }], v('with_audio_guide'), 'en')
   expect(used.idle).toHaveLength(0)
   const far = debrief(d, [{ item: 'tactile_route', at: d.route.filter((s) => !s.existing)[1].id }], v('with_audio_guide'), 'fi')
@@ -121,9 +119,9 @@ it('debrief lists whole-museum items: waiting devices, working devices, staff, w
   const near = d.zones.find((z) => z.id === 'viestinta') ?? d.zones[0]
   const by = (ps: { item: string; at: string }[], lang: 'en' | 'fi' = 'en') => Object.fromEntries(debrief(d, ps, v('with_audio_guide'), lang).venue.map((x) => [x.id, x]))
   const idle = by([{ item: 'audio_guide_devices', at: '' }, { item: 'staff_training', at: '' }, { item: 'website_info', at: '' }])
-  expect(idle.audio_guide_devices.state).toBe('waiting')
-  expect(idle.audio_guide_devices.text).toMatch(/added no access/)
-  expect(idle.audio_guide_devices.text).toContain(d.items.find((i) => i.id === 'audio_description')!.name) // what it needs, in plain words
+  expect(idle.audio_guide_devices.state).toBe('ok') // a general guide: some access of its own
+  expect(idle.audio_guide_devices.text).toMatch(/general audio guide/)
+  expect(idle.audio_guide_devices.text).toContain(d.items.find((i) => i.id === 'audio_description')!.name) // what it still needs to describe the objects, in plain words
   expect(idle.staff_training).toBeDefined()
   expect(idle.website_info.state).toBe('unscored')
   expect(idle.website_info.text).toMatch(/does not change the access score/)

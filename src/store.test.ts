@@ -124,8 +124,8 @@ it('screens and other carriers are "waiting" until something placed uses them', 
   const screen = data.zones.find((z) => z.hasScreen)!.id
   expect(waitingMap(data, []).has(`video_screen@${screen}`)).toBe(true) // existing screen, nothing accessible yet
   expect(waitingMap(data, [{ item: 'large_print_captions', at: screen }]).has(`video_screen@${screen}`)).toBe(false)
-  expect(waitingMap(data, [{ item: 'audio_guide_devices', at: '' }]).has('audio_guide_devices@')).toBe(true)
-  expect(waitingMap(data, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: data.zones[0].id }]).has('audio_guide_devices@')).toBe(false)
+  expect(waitingMap(data, [{ item: 'visitor_wifi', at: '' }]).has('visitor_wifi@')).toBe(true) // a pure carrier
+  expect(waitingMap(data, [{ item: 'audio_guide_devices', at: '' }]).has('audio_guide_devices@')).toBe(false) // the audio guide has value of its own (general guide)
   expect(waitingMap(data, [{ item: 'staff_training', at: '' }]).has('staff_training@')).toBe(false) // staff training has value of its own
 })
 

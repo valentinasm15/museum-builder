@@ -168,6 +168,8 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
     const it = items.get(x.placement.item)!, name = itemName(lang, it), cost = money(lang, x.cost || it.costEur)
     const miss = std.inactive.find((i) => i.placement.item === it.id && i.placement.at === '')
     const deps = dependents(it.id), placedDeps = deps.filter((i) => placements.some((p) => p.item === i.id))
+    const usedDeps = placedDeps.filter((i) => stdPlan.placements.some((p) => p.item === i.id && usable(stdPlan, i.id, p.at, null)))
+    const chText = (i: typeof it) => { const k = i.scope === 'venue' && i.channel === 'audio' && d.texts.ch_audio_general ? 'ch_audio_general' : `ch_${i.channel}`; return d.texts[k] ? t(d, lang, k) : i.channel } // a whole-museum audio guide is general, not a description
     const worked = x.delta > 1e-9 || x.helped.length > 0
     const carrier = deps.length > 0 && it.infoValue <= 0 && !it.reachGrant
     let state: 'ok' | 'waiting' | 'idle' | 'missing' | 'unscored', text: string
@@ -177,8 +179,9 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
       state = 'ok'
       text = it.reachGrant === 'plan_only' ? t(d, lang, 'deb_v_plan', { item: name, cost })
         : it.reachGrant === 'staff_guided' ? t(d, lang, 'deb_v_staff', { item: name, cost })
-        : carrier ? t(d, lang, 'deb_v_enabled', { item: name, cost, what: placedDeps.filter((i) => stdPlan.placements.some((p) => p.item === i.id && usable(stdPlan, i.id, p.at, null))).map((i) => itemName(lang, i)).join(', ') })
-        : t(d, lang, 'deb_v_info', { item: name, cost, channel: d.texts[`ch_${it.channel}`] ? t(d, lang, `ch_${it.channel}`) : it.channel })
+        : carrier ? t(d, lang, 'deb_v_enabled', { item: name, cost, what: usedDeps.map((i) => itemName(lang, i)).join(', ') })
+        : t(d, lang, 'deb_v_info', { item: name, cost, channel: chText(it) }) + (usedDeps.length ? ` ${t(d, lang, 'deb_v_also', { what: usedDeps.map((i) => itemName(lang, i)).join(', ') })}`
+          : deps.length && !placedDeps.length ? ` ${t(d, lang, 'deb_v_add_ad', { needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') })}` : '')
     } else if (carrier && !placedDeps.length) { state = 'waiting'; text = t(d, lang, 'deb_v_waiting', { item: name, cost, needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') }) }
     else { state = 'idle'; text = t(d, lang, it.reachGrant === 'staff_guided' ? 'deb_v_idle_staff' : 'deb_v_idle', { item: name, cost }) }
     // Today's conditions: a day with no guides to lend or nobody on duty turns "works" into "did not help today" instead of contradicting itself.

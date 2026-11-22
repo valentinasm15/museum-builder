@@ -39,7 +39,7 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
     if (!how) { say('not_reachable', {}, z.id); ev[ev.length - 1].text = `${zn}: ${ev[ev.length - 1].text}`; inactive((a) => a === z.id, z.id); continue }
     say(how === 'plan' && persona.attrs.needsContinuousRoute ? 'walk_reach_plan_need' : `walk_reach_${how}`, { zone: zn }, z.id)
     const r = zoneScore(plan, z, persona, memo)
-    const chans = r.channels.filter((c) => d.texts[`ch_${c}`]).map((c) => t(d, lang, `ch_${c}`))
+    const chans = r.channels.filter((c) => d.texts[`ch_${c}`]).map((c) => t(d, lang, channelKey(plan, persona, memo, z.id, c)))
     if (!chans.length) say('walk_no_info', { zone: zn, exhibits: cap(z.exhibits.join(', ') || unnamed(zn, lang)) }, z.id)
     else {
       say('walk_info', { zone: zn, channels: chans.join(', ') }, z.id)
@@ -119,9 +119,19 @@ function venueNoter({ d, plan, bare, sc, persona, ctx, lang, memo }: NoteEnv) {
       const used = placed.filter((i) => plan.placements.some((p) => p.item === i.id && usable(plan, i.id, p.at, persona, memo)))
       return used.length ? ok('walk_v_carrier', { what: used.map((i) => itemName(lang, i)).join(', ') }) : { ...ok('walk_v_unused'), state: 'wait' }
     }
-    if (it.infoValue > 0 && it.channel) return ok('walk_v_info', { channel: d.texts[`ch_${it.channel}`] ? t(d, lang, `ch_${it.channel}`) : it.channel })
+    if (it.infoValue > 0 && it.channel) {
+      const ck = generalAudio(it) && d.texts.ch_audio_general ? 'ch_audio_general' : `ch_${it.channel}`, channel = d.texts[ck] ? t(d, lang, ck) : it.channel
+      const used = deps.filter((i) => plan.placements.some((p) => p.item === i.id && usable(plan, i.id, p.at, persona, memo)))
+      return used.length ? ok('walk_v_info_also', { channel, what: used.map((i) => itemName(lang, i)).join(', ') }) : ok('walk_v_info', { channel })
+    }
     return ok('walk_v_unscored')
   }
+}
+/** Text key for an information channel in a room: audio that comes only from a whole-museum guide is "the general audio guide", not a description of the objects. */
+const generalAudio = (it: Item | undefined) => !!it && it.scope === 'venue' && it.channel === 'audio'
+function channelKey(plan: Plan, persona: Persona, memo: Map<string, boolean>, zoneId: string, c: string): string {
+  const own = plan.placements.some((p) => p.at === zoneId && plan.items.get(p.item)?.channel === c && plan.items.get(p.item)!.infoValue > 0 && usable(plan, p.item, p.at, persona, memo))
+  return c === 'audio' && !own && plan.data.texts.ch_audio_general ? 'ch_audio_general' : `ch_${c}`
 }
 /** Venue items a room item relies on that this visitor cannot use today, when that (and nothing else) is why the room item fails for them. */
 function venueBlockers(plan: Plan, it: Item, at: string, persona: Persona, memo: Map<string, boolean>): string[] {
@@ -172,10 +182,15 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
     const r = zoneScore(plan, z, persona, memo)
     const mine = plan.placements.filter((p) => p.at === z.id && plan.items.get(p.item)?.moment === 'room')
     const verdicts = mine.map((p) => ({ p, v: verdict(p) }))
-    const works: StopLine[] = r.channels.filter((c) => d.texts[`ch_${c}`]).map((c) => ({
-      text: cap(t(d, lang, `ch_${c}`)),
-      via: [...new Set(verdicts.filter((x) => x.v.ok && plan.items.get(x.p.item)?.channel === c).flatMap((x) => x.v.line.via ?? []))],
-    }))
+    const works: StopLine[] = r.channels.filter((c) => d.texts[`ch_${c}`]).map((c) => {
+      const ck = channelKey(plan, persona, memo, z.id, c)
+      return {
+        text: cap(t(d, lang, ck)),
+        via: ck === 'ch_audio_general' // the whole-museum guide itself is what the visitor hears here
+          ? plan.placements.filter((p) => p.at === '' && generalAudio(plan.items.get(p.item)) && usable(plan, p.item, '', persona, memo)).map((p) => p.item)
+          : [...new Set(verdicts.filter((x) => x.v.ok && plan.items.get(x.p.item)?.channel === c).flatMap((x) => x.v.line.via ?? []))],
+      }
+    })
     const grantors = (g: string) => plan.placements.filter((p) => plan.items.get(p.item)?.reachGrant === g && usable(plan, p.item, p.at, persona, memo)).map((p) => p.item)
     const getsHere: StopLine[] = [ // how the visitor got here, and the whole-museum item behind it; shown even when the room itself has nothing to use
       ...(keys.includes('walk_reach_staff') ? [{ text: t(d, lang, 'walk_room_staff'), via: grantors('staff_guided') }] : []),

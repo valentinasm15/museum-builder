@@ -60,6 +60,7 @@ it('rooms found only through the floor plan are counted as partly experienced, n
 
 const routeCost = d.items.find((i) => i.scope === 'path')!.costEur
 const P = (item: string, at: string) => ({ item, at })
+const near0 = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
 
 it('stops: entrance first, one stop per room in order, no unfilled placeholders (EN/FI)', () => {
   for (const lang of ['en', 'fi'] as const) {
@@ -80,10 +81,11 @@ it('stops: a room beyond the route is cut off at the break and the fix is the mi
   expect(room.fails[0].fix?.items).toHaveLength(missing.length)
 })
 
-it('stops: devices with no audio content wait at the entrance; with content the room points back to them', () => {
-  const idle = stops(d, [P('audio_guide_devices', '')], noPhone, { hasMuseumDevice: true }).find((x) => x.kind === 'entrance')!
-  expect(idle.fails.some((f) => /waiting/.test(f.text))).toBe(true)
-  const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
+it('stops: the audio guide alone is a general guide in the rooms; with audio description the room points back to it', () => {
+  const alone = stops(d, [P('audio_guide_devices', '')], noPhone, { hasMuseumDevice: true })
+  expect(alone.find((x) => x.kind === 'entrance')!.fails.some((f) => /waiting/.test(f.text))).toBe(false)
+  expect(alone.find((x) => x.zoneId === near0.id)!.works.some((w) => /general audio guide/.test(w.text) && w.via?.includes('audio_guide_devices'))).toBe(true)
+  const near = near0
   const used = stops(d, [P('audio_guide_devices', ''), P('audio_description', near.id)], noPhone, { hasMuseumDevice: true })
   expect(used.find((x) => x.zoneId === near.id)!.works.some((w) => w.via?.includes('audio_guide_devices'))).toBe(true)
   expect(used.find((x) => x.kind === 'entrance')!.fails.some((f) => /waiting/.test(f.text))).toBe(false)
@@ -142,27 +144,29 @@ it('a screen with no followable film gets a line and a fix; with captions or des
 })
 
 // ---- whole-museum (venue) items in the walkthrough ----
-const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
+const near = near0
 const walk = (ps: ReturnType<typeof P>[], ctx = {}, p = noPhone, lang: 'en' | 'fi' = 'en') => visit(d, ps, p, ctx, lang)
 const DEV = d.items.find((i) => i.id === 'audio_guide_devices')!.name, AD = d.items.find((i) => i.id === 'audio_description')!.name // names live in the sheet
 const clean = (texts: string[]) => expect(texts.join(' ')).not.toMatch(/[{}]|undefined|NaN|\[/)
 
-it('venue: the entrance stop lists the floor plan and placed devices; devices alone wait and add no access', () => {
+it('venue: the entrance stop lists the floor plan and the audio guide; the guide alone is a general guide, not a description', () => {
   const ps = [P('audio_guide_devices', '')]
   const ent = stops(d, ps, noPhone, { hasMuseumDevice: true }).find((x) => x.kind === 'entrance')!
   expect(ent.works.some((w) => /floor plan/i.test(w.text))).toBe(true) // existing item, narrated at the entrance
-  expect(ent.fails.some((f) => f.text.includes(DEV) && /waiting/.test(f.text))).toBe(true)
-  expect(ent.works.some((w) => w.text.includes(DEV))).toBe(false)
+  expect(ent.works.some((w) => w.text.includes(DEV))).toBe(true)
+  expect(ent.fails.some((f) => f.text.includes(DEV))).toBe(false)
   const ev = walk(ps, { hasMuseumDevice: true })
-  expect(ev.some((e) => e.key === 'walk_venue_waiting' && e.text.includes(DEV))).toBe(true)
-  expect(ev.some((e) => e.key === 'walk_v_carrier' || e.key === 'walk_v_via')).toBe(false)
-  expect(score(d, ps).overall).toBe(score(d, []).overall) // info_value 0: no direct effect on the score
+  expect(ev.some((e) => e.key === 'walk_v_info' && e.text.includes(DEV) && /general audio guide/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_v_info_also' || e.key === 'walk_v_via')).toBe(false) // no room audio description to carry yet
+  expect(ev.find((e) => e.zoneId === near.id && e.key === 'walk_info')?.text).toMatch(/general audio guide/)
+  expect(ev.find((e) => e.zoneId === near.id && e.key === 'walk_info')?.text).not.toContain(t(d, 'en', 'ch_audio')) // not called a description
+  expect(score(d, ps).overall).toBeGreaterThan(score(d, []).overall) // info_value 0.4: partial credit
 })
 
 it('venue: devices with audio description in a reachable room are narrated as working, at the entrance and in the room', () => {
   const ps = [P('audio_guide_devices', ''), P('audio_description', near.id)]
   const ev = walk(ps, { hasMuseumDevice: true })
-  expect(ev.some((e) => e.key === 'walk_v_carrier' && e.text.includes(DEV) && e.text.includes(AD))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_v_info_also' && e.text.includes(DEV) && e.text.includes(AD))).toBe(true)
   const inRoom = ev.find((e) => e.key === 'walk_v_via' && e.zoneId === near.id)
   expect(inRoom?.text).toContain(DEV)
   expect(ev.findIndex((e) => e.key === 'walk_v_carrier')).toBeLessThan(ev.findIndex((e) => e.key === 'walk_v_via')) // entrance before the room
