@@ -11,19 +11,18 @@ export const world = (d: GameData, x: number, y: number): [number, number] => [x
 const HEIGHT: Record<Shape, number> = { box: 0.5, cyl: 0.5, slab: 0.22, panel: 0.6, cone: 0.6 }
 
 /** The symbols of a room's items as one row of real buttons above the room: they never overlap each other or the room name, and keyboard users can reach them. */
-export function ItemRow({ y, items, names }: { y: [number, number]; names?: boolean; items: { id: string; glyph: string; active: boolean; label: string; onInspect: () => void }[] }) {
+export function ItemRow({ y, items, names, inline }: { y: [number, number]; names?: boolean; inline?: boolean; items: { id: string; glyph: string; active: boolean; label: string; onInspect: () => void }[] }) {
   if (!items.length) return null
-  return (
-    <Html position={[0, y[0], y[1]]} center zIndexRange={[40, 30]}>
-      <div className={names ? 'itemrow named' : 'itemrow'}>
-        {items.map((i) => (
-          <button key={i.id} type="button" className={i.active ? 'glyph' : 'glyph warn'} aria-label={i.label} title={i.label} onClick={(e) => { e.stopPropagation(); i.onInspect() }}>
-            <span aria-hidden="true">{i.active ? i.glyph : `⚠ ${i.glyph}`}</span>{names && <span className="gname"> {i.label}</span>}
-          </button>
-        ))}
-      </div>
-    </Html>
+  const row = (
+    <div className={names ? 'itemrow named' : 'itemrow'}>
+      {items.map((i) => (
+        <button key={i.id} type="button" className={i.active ? 'glyph' : 'glyph warn'} aria-label={i.label} title={i.label} onClick={(e) => { e.stopPropagation(); i.onInspect() }}>
+          <span aria-hidden="true">{i.active ? i.glyph : `⚠ ${i.glyph}`}</span>{names && <span className="gname"> {i.label}</span>}
+        </button>
+      ))}
+    </div>
   )
+  return inline ? row : <Html position={[0, y[0], y[1]]} center zIndexRange={[40, 30]}>{row}</Html>
 }
 
 /** A placed item on the map. Click it to read what it needs (the card lives outside the scene). */
@@ -45,8 +44,8 @@ export function ItemBlock({ item, pos, active, inspected, onInspect }: { item: I
 }
 
 /** A low platform with a button label (real HTML) and clickable body. Children are positioned relative to its centre. */
-export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, selected, target, onPick, children }: {
-  d: GameData; x: number; y: number; w: number; h: number; up?: number; label: string; num: string | number; hint?: string; mark?: { icon: string; text: string }; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
+export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, chips, selected, target, onPick, children }: {
+  d: GameData; x: number; y: number; w: number; h: number; up?: number; label: string; num: string | number; hint?: string; mark?: { icon: string; text: string }; chips?: ReactNode; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
 }) {
   const [cx, cz] = world(d, x + w / 2, y + h / 2)
   return (
@@ -59,7 +58,7 @@ export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, select
       </RoundedBox>
       {children}
       <Html position={[w > 4 ? 0 : w / 2 - 0.2, 0.9 + up, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
-        <button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button>
+        <div className="lblstack">{chips}<button type="button" className="zlabel" aria-pressed={selected} onClick={onPick}><span aria-hidden="true" className="zn">{num}</span>{mark && <span aria-hidden="true" className="zmark">{mark.icon}</span>}<span className="zname">{label}{hint && <span className="sr"> ({hint})</span>}{mark && <span className="sr"> ({mark.text})</span>}</span></button></div>
       </Html>
     </group>
   )

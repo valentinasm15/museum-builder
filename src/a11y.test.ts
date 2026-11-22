@@ -71,6 +71,7 @@ describe.skipIf(!pw)('WCAG 2.2 AA (axe-core)', () => {
   const screens: [string, () => Promise<void>][] = [
     ['intro tour', async () => {}],
     ['planning view', async () => { await btn('Skip tour').click(); await page.waitForTimeout(400) }],
+    ['room popup on the map', async () => { await btn(/Networks/).first().click(); await page.waitForTimeout(500) }],
     ['exhibition summary (text view)', async () => { await btn(/\(text view\)/).click(); await page.waitForTimeout(400) }],
     ['walkthrough', async () => { await btn('Launch exhibition').first().click(); await btn('Launch exhibition').last().click(); await page.waitForTimeout(1500) }],
     ['debrief', async () => { await btn('Skip walkthrough').click(); await btn('See the summary').click(); await page.waitForTimeout(2500) }],

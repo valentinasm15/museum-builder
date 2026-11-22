@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { GameData, Item } from '../data/load'
 import { Plan } from '../engine/score'
-import ItemInfo from '../ui/ItemInfo'
+import ItemInfo, { ZoneInfo } from '../ui/ItemInfo'
 import { inactiveMap, itemName, t, targetName, useGame, waitingMap } from '../store'
 import { lookOf, P } from './look'
 import { wallRuns } from './footprint'
@@ -45,7 +45,11 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
     [...d.existing.filter((e) => e.zoneId === at).map((e) => e.itemId), ...placements.filter((p) => p.at === at).map((p) => p.item)]
       .map((id) => d.items.find((i) => i.id === id)!)
       .filter((i) => i.scope !== 'path' && i.costEur > 0) // zero-cost existing items are baseline, not objects
-  const blocks = (at: string, x: number, y: number, w: number, h: number, w0: [number, number], pick: (i: Item) => boolean = () => true, names = false) => {
+  const chipItems = (at: string, pick: (i: Item) => boolean = () => true) => itemsAt(at).filter(pick).map((it) => ({
+    id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: () => setInspect({ item: it.id, at }),
+  }))
+  // Item symbols are drawn inside each room's/pad's own label (see `chips`), so they stay tied to it, never overlap it, and never drift over a neighbour when the map rotates.
+  const blocks = (at: string, x: number, y: number, w: number, h: number, w0: [number, number], pick: (i: Item) => boolean = () => true) => {
     const cols = Math.max(1, Math.floor((w - 0.2) / 1.05)), here = itemsAt(at).filter(pick)
     const open = (it: Item) => () => setInspect({ item: it.id, at })
     return (
@@ -54,7 +58,6 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
           const [px, pz] = world(d, x + 0.6 + (k % cols) * 1.05, y + 0.6 + Math.floor(k / cols) * 1.05)
           return <ItemBlock key={it.id} item={it} active={!missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`)} inspected={inspect?.item === it.id && inspect.at === at} onInspect={open(it)} pos={[px - w0[0], 0.18, pz - w0[1]]} />
         })}
-        <ItemRow y={[names ? 1.8 : 2, -h / 2 - 0.3]} names={names} items={here.map((it) => ({ id: it.id, glyph: lookOf(it).glyph, active: !missing.has(`${it.id}@${at}`) && !waiting.has(`${it.id}@${at}`), label: itemName(lang, it), onInspect: open(it) }))} />
       </>
     )
   }
@@ -111,17 +114,17 @@ function Room3D({ d, rot }: { d: GameData; rot: number }) {
       ))}
       {d.zones.map((z, n) => (
         <Platform key={z.id} num={n + 1} up={d.zones.some((o) => o !== z && o.w > 4 && o.y >= z.y + z.h && o.y - z.y - z.h < 4 && o.x < z.x + z.w / 2 && z.x + z.w / 2 < o.x + o.w) ? 3 : 0} d={d} x={z.x} y={z.y} w={z.w} h={z.h} selected={focus === z.id} target={picked?.scope === 'zone'} onPick={() => pickZone(z.id)}
-          mark={wv?.marks[z.id]} label={targetName(d, lang, z.id)} hint={picked?.scope === 'zone' ? `${t(d, lang, 'place')} ${itemName(lang, picked)}` : undefined}>
+          mark={wv?.marks[z.id]} chips={<ItemRow inline y={[0, 0]} items={chipItems(z.id)} />} label={targetName(d, lang, z.id)} hint={picked?.scope === 'zone' ? `${t(d, lang, 'place')} ${itemName(lang, picked)}` : undefined}>
           {blocks(z.id, z.x, z.y, z.w, z.h, world(d, z.x + z.w / 2, z.y + z.h / 2))}
         </Platform>
       ))}
       {wv && <Walker d={d} path={wv.path} barrier={wv.barrier} />}
       <Platform num="⌂" d={d} x={evx} y={vy} w={ew} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
-        label={t(d, lang, 'entrance_items')}>
+        label={t(d, lang, 'entrance_items')} chips={<ItemRow inline y={[0, 0]} items={chipItems('', atEntrance)} />}>
         {blocks('', evx, vy, ew, vh, [ecx, ecz], atEntrance)}
       </Platform>
       <Platform num="⌂" d={d} x={vx} y={vy} w={vw} h={vh} selected={focus === 'venue'} onPick={() => setFocus(focus === 'venue' ? null : 'venue')}
-        label={t(d, lang, 'whole_museum')}>
+        label={t(d, lang, 'whole_museum')} chips={<ItemRow inline y={[0, 0]} items={chipItems('', (i) => !atEntrance(i))} />}>
         {blocks('', vx, vy, vw, vh, [vcx, vcz], (i) => !atEntrance(i))}
       </Platform>
     </>
@@ -179,6 +182,7 @@ export default function Scene({ d }: { d: GameData }) {
         <span className="hint">{t(d, lang, 'scene_keys')}</span>
       </div>
       <ItemInfo d={d} />
+      <ZoneInfo d={d} />
       <Canvas orthographic shadows camera={{ near: 0.1, far: 200, position: [20, 20, 20] }} dpr={[1, 2]}>
         <CanvasLabel text={label} />
         <Rig rot={rot} zoom={zoom} />
