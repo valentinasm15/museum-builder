@@ -7,7 +7,7 @@ import { itemName, t, useGame, visitCtx, type Lang } from '../store'
 // One panel per stop: what works and what does not at this moment of the visit. The scene shows the same stop; this text is the full equivalent.
 const L = {
   works: { en: 'Works', fi: 'Toimii' }, fails: { en: 'Does not work', fi: 'Ei toimi' },
-  via: { en: 'thanks to {items} at the entrance', fi: '{items} sisäänkäynnillä' }, more: { en: 'More', fi: 'Lisää' },
+  via: { en: 'thanks to {items}', fi: 'kohteen {items} ansiosta' }, more: { en: 'More', fi: 'Lisää' },
   visitor: { en: 'Visitor', fi: 'Kävijä' }, summary: { en: 'See the summary', fi: 'Näytä yhteenveto' }, stop: { en: 'Stop {n} of {total}', fi: 'Pysäkki {n}/{total}' },
   full: { en: 'Guided, something to experience', fi: 'Opastettu, koettavaa' }, partial: { en: 'With effort, no guiding route', fi: 'Vaivalla, ei opaslinjaa' },
   empty: { en: 'Reached, nothing to experience', fi: 'Perillä, ei koettavaa' }, none: { en: 'Nothing leads here', fi: 'Mikään ei johda tänne' },

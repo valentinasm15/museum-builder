@@ -81,13 +81,11 @@ it('debrief page data: a room status per zone, verdict counts, gap and a next st
   }
 }, 60000)
 
-it('an enabler bought without content is idle, not the "weakest buy"; with content it is not idle', () => {
+it('the audio guide has value of its own (general guide): not idle alone, and counted among the buys', () => {
   const z = d.zones[0].id
   const alone = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'large_print_label', at: z }], v('with_audio_guide'), 'en')
-  expect(alone.idle).toHaveLength(1)
-  expect(alone.idle[0].cost).toBe(cost('audio_guide_devices'))
-  expect(alone.idle[0].text).toMatch(/waiting/)
-  expect(alone.values.some((s) => /Audio guide/.test(s))).toBe(false)
+  expect(alone.idle).toHaveLength(0)
+  expect(alone.values.some((s) => /Audio guide/.test(s))).toBe(true)
   const used = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: z }], v('with_audio_guide'), 'en')
   expect(used.idle).toHaveLength(0)
   const far = debrief(d, [{ item: 'tactile_route', at: d.route.filter((s) => !s.existing)[1].id }], v('with_audio_guide'), 'fi')
@@ -116,3 +114,30 @@ it('next step names the most valuable buy even when unaffordable, and never talk
 }, 60000)
 
 const P2 = (item: string, at: string) => ({ item, at })
+
+it('debrief lists whole-museum items: waiting devices, working devices, staff, website', () => {
+  const near = d.zones.find((z) => z.id === 'viestinta') ?? d.zones[0]
+  const by = (ps: { item: string; at: string }[], lang: 'en' | 'fi' = 'en') => Object.fromEntries(debrief(d, ps, v('with_audio_guide'), lang).venue.map((x) => [x.id, x]))
+  const idle = by([{ item: 'audio_guide_devices', at: '' }, { item: 'staff_training', at: '' }, { item: 'website_info', at: '' }])
+  expect(idle.audio_guide_devices.state).toBe('ok') // a general guide: some access of its own
+  expect(idle.audio_guide_devices.text).toMatch(/general audio guide/)
+  expect(idle.audio_guide_devices.text).toContain(d.items.find((i) => i.id === 'audio_description')!.name) // what it still needs to describe the objects, in plain words
+  expect(idle.staff_training).toBeDefined()
+  expect(idle.website_info.state).toBe('unscored')
+  expect(idle.website_info.text).toMatch(/does not change the access score/)
+  const used = by([{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: near.id }])
+  expect(used.audio_guide_devices.state).toBe('ok')
+  expect(used.audio_guide_devices.text).toMatch(/usable in the rooms/)
+  const today = debrief(d, [{ item: 'audio_guide_devices', at: '' }], v('without_audio_guide'), 'en').venue[0]
+  expect(today.text).toMatch(/no audio guides to lend/)
+  for (const lang of ['en', 'fi'] as const)
+    for (const x of Object.values(by([{ item: 'audio_guide_devices', at: '' }, { item: 'staff_training', at: '' }, { item: 'website_info', at: '' }, { item: 'visitor_wifi', at: '' }], lang)))
+      expect(x.text).not.toMatch(/[{}]|undefined|NaN/)
+  for (const x of Object.values(used)) expect(x.text).not.toMatch(/\)\s\(€/) // no "(name) (€cost)"
+  // a day with nobody on duty / no guides to lend does not read "works"
+  const staffDay = debrief(d, [{ item: 'staff_training', at: '' }], v('unstaffed_hours'), 'en').venue[0]
+  expect(staffDay.state).toBe('idle'); expect(staffDay.text).toMatch(/did not help this visitor today/); expect(staffDay.text).not.toMatch(/: works/)
+  const devDay = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: near.id }], v('without_audio_guide'), 'en').venue[0]
+  expect(devDay.state).toBe('idle'); expect(devDay.text).toMatch(/no audio guides to lend/); expect(devDay.text).not.toMatch(/: works/)
+  expect(debrief(d, [{ item: 'braille_label', at: d.zones[0].id }], v('with_audio_guide'), 'en').venue).toEqual([]) // zone items only: no venue list
+})

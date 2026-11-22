@@ -4,6 +4,8 @@ import { moneyEfficiency } from '../engine/benchmark'
 import { bandText, debrief, efficiency, local, nextStep } from '../engine/feedback'
 import { money, t, useGame, visitCtx } from '../store'
 
+const VENUE_ICON = { ok: '✓', waiting: '○', idle: '○', missing: '⚠', unscored: '–' } as const // not colour alone: the text says it too
+
 // Plain headings, lists and text: reads in order with a screen reader, no animation.
 export default function Debrief({ d, onRestart }: { d: GameData; onRestart: () => void }) {
   const { lang, placements, visit: v, round, startRound, closeVisit, rounds, setRound, restart } = useGame()
@@ -70,7 +72,8 @@ export default function Debrief({ d, onRestart }: { d: GameData; onRestart: () =
         <h3 id="deb-c-h">{L('titleC')}</h3>
         <p><progress value={x.spent} max={x.budget || 1} aria-label={L('spentOf', { spent: money(lang, x.spent), budget: money(lang, x.budget) })} /> {money(lang, Math.max(0, x.budget - x.spent))} {L('left')}</p>
         <p>{L('wasted')}: <strong>{money(lang, x.inactiveTotal + x.idle.reduce((a, i) => a + i.cost, 0))}</strong></p>
-        {x.idle.length > 0 && <ul>{x.idle.map((i) => <li key={i.key}>{i.text}</li>)}</ul>}
+        {x.idle.some((i) => !x.venue.some((v) => i.key.startsWith(v.key))) && <ul>{x.idle.filter((i) => !x.venue.some((v) => i.key.startsWith(v.key))).map((i) => <li key={i.key}>{i.text}</li>)}</ul>}
+        {x.venue.length > 0 && <><h4>{t(d, lang, 'deb_venue')}</h4><ul className="venue">{x.venue.map((v) => <li key={v.key}><span aria-hidden="true">{VENUE_ICON[v.state]} </span>{v.text}</li>)}</ul></>}
         {x.values.length > 0 && <ul>
           <li>{L('bestBuy')}: {x.values[0]}</li>
           {x.values.length > 1 && <li>{L('weakBuy')}: {x.values[x.values.length - 1]}</li>}
