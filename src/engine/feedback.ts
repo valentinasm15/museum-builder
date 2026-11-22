@@ -50,7 +50,7 @@ const LOCAL = {
   nextBuy: { en: 'Best next buy: {what} ({cost}). It would help {n} of {total} visitor types more.', fi: 'Paras seuraava ostos: {what} ({cost}). Se auttaisi {n}/{total} kävijätyyppiä enemmän.' },
   nextShort: { en: 'The biggest step would be {what} ({cost}); you are {short} short.', fi: 'Suurin askel olisi {what} ({cost}); sinulta puuttuu {short}.' },
   gameTitle: { en: 'Your game', fi: 'Pelisi' },
-  roundLine: { en: 'Round {n}: {visitor}. For this visitor: {focal}. Whole museum: {overall}.', fi: 'Kierros {n}: {visitor}. Tälle kävijälle: {focal}. Koko museo: {overall}.' },
+  roundLine: { en: 'Round {n}: {visitor}. For this visitor: {focal}. Whole exhibition: {overall}.', fi: 'Kierros {n}: {visitor}. Tälle kävijälle: {focal}. Koko näyttely: {overall}.' },
   playAgain: { en: 'Start Over', fi: 'Aloita alusta' },
   launchSummary: { en: 'Spent {spent} of {budget}. Items placed: {n}.', fi: 'Käytetty {spent} / {budget}. Sijoitettuja kohteita: {n}.' },
   launchInactive: { en: 'Placed but not working yet:', fi: 'Sijoitettu, mutta ei vielä toimi:' },
@@ -58,6 +58,10 @@ const LOCAL = {
   launchBack: { en: 'Keep planning', fi: 'Jatka suunnittelua' },
   rcvLead: { en: 'The exhibition receives a visitor that:', fi: 'Näyttelyyn saapuu kävijä, joka:' },
   rcvClose: { en: 'Plan with that in mind. When you launch the exhibition you will also see how the same layout works for everyone else.', fi: 'Suunnittele tämä kävijä mielessäsi. Kun avaat näyttelyn, näet myös, miten sama asettelu toimii kaikille muille.' },
+  roomFacts: { en: 'Exhibit objects: {n} · {screen}', fi: 'Esineitä: {n} · {screen}' },
+  roomScreen: { en: 'has a screen', fi: 'on näyttö' }, roomNoScreen: { en: 'no screen', fi: 'ei näyttöä' },
+  roomLabel: { en: 'Room', fi: 'Huone' },
+  roomInteract: { en: 'How visitors interact with the pieces', fi: 'Miten kävijä on vuorovaikutuksessa esineiden kanssa' },
   roundsH: { en: 'Two rounds', fi: 'Kaksi kierrosta' },
   rounds1: { en: 'The game has {rounds} rounds. Each round brings a different type of visitor.', fi: 'Pelissä on {rounds} kierrosta. Jokaisella kierroksella on eri kävijätyyppi.' },
   rounds2: { en: 'In round 1, you plan for the first visitor type and get feedback.', fi: 'Kierroksella 1 suunnittelet ensimmäiselle kävijätyypille ja saat palautetta.' },
@@ -288,3 +292,4 @@ export function nextStep(d: GameData, lang: Lang, placements: Placement[]): stri
   if (!best) return short || local(lang, 'nextNone')
   return short && best !== top ? `${short} ${buy(best)}` : buy(best)
 }
+

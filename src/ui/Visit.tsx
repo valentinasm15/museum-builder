@@ -11,7 +11,7 @@ const L = {
   visitor: { en: 'Visitor', fi: 'Kävijä' }, summary: { en: 'See the summary', fi: 'Näytä yhteenveto' }, stop: { en: 'Stop {n} of {total}', fi: 'Pysäkki {n}/{total}' },
   full: { en: 'Guided, something to experience', fi: 'Opastettu, koettavaa' }, partial: { en: 'With effort, no guiding route', fi: 'Vaivalla, ei opaslinjaa' },
   empty: { en: 'Reached, nothing to experience', fi: 'Perillä, ei koettavaa' }, none: { en: 'Nothing leads here', fi: 'Mikään ei johda tänne' },
-  across: { en: 'Across the museum', fi: 'Koko museossa' }, next: { en: 'Next step', fi: 'Seuraava askel' },
+  across: { en: 'Across the exhibition', fi: 'Koko näyttelyssä' }, next: { en: 'Next step', fi: 'Seuraava askel' },
   ok: { en: 'Works', fi: 'Toimii' }, mixed: { en: 'Partly works', fi: 'Toimii osittain' }, idle: { en: 'Not working yet', fi: 'Ei vielä toimi' },
 }
 const word = (lang: Lang, k: keyof typeof L, v: Record<string, string | number> = {}) => L[k][lang].replace(/\{(\w+)\}/g, (m, n) => (n in v ? String(v[n]) : m))

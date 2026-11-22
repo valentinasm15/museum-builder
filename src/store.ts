@@ -157,7 +157,7 @@ export const useGame = create<State>((set, get) => {
       set({ placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', rounds: [], walkView: null, inspect: null, announcement: drawn(data, lang, visit) })
     },
     walk: { pid: '', i: 0 }, setWalk: (w) => set({ walk: { ...get().walk, ...w } }), walkView: null, setWalkView: (walkView) => set({ walkView }),
-    setFocus: (focus) => set({ focus }),
+    setFocus: (focus) => set(focus ? { focus, inspect: null } : { focus }), // picking a room closes an open item card
     init: (base) => {
       const level = defaultLevel(base), data = withLevel(base, level), visit = drawVisit(base)
       set({ base, level, data, error: null, placements: [], selected: null, focus: null, visit, round: 1, phase: 'planning', announcement: drawn(data, get().lang, visit) })

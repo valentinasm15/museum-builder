@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { GameData } from '../data/load'
+import { local } from '../engine/feedback'
 import { inactiveMap, itemName, money, needsText, t, targetName, useGame, waitingMap, type Lang } from '../store'
 
 // Click a placed item on the map to read what it is for and what it still needs. Live: the card updates as soon as the missing piece is placed.
@@ -49,6 +50,7 @@ export function ZoneInfo({ d }: { d: GameData }) {
   const { lang, focus, setFocus, selected, phase, inspect } = useGame()
   const z = d.zones.find((x) => x.id === focus)
   const about = z && ((lang === 'fi' && z.aboutFi) || z.about)
+  const how = z && ((lang === 'fi' && z.interactionFi) || z.interaction) // optional Zones columns
   useEffect(() => {
     if (!z) return
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setFocus(null) }
@@ -59,10 +61,11 @@ export function ZoneInfo({ d }: { d: GameData }) {
   const close = lang === 'fi' ? 'Sulje' : 'Close'
   const name = (lang === 'fi' && z.nameFi) || z.nameEn
   return (
-    <section className="iteminfo zone" role="region" aria-label={`${name} · ${t(d, lang, 'about_room')}`}>
+    <section className="iteminfo zone" role="region" aria-label={`${local(lang, 'roomLabel')}: ${name}`}>
       <button type="button" className="xbtn" aria-label={close} title={close} onClick={() => setFocus(null)}><span aria-hidden="true">✕</span></button>
-      <h3>{name}<span className="note"> · {t(d, lang, 'about_room')}</span></h3>
+      <h3>{local(lang, 'roomLabel')}: {name}</h3>
       <p>{about}</p>
+      {how && <><h4>{local(lang, 'roomInteract')}</h4><p>{how}</p></>}
     </section>
   )
 }

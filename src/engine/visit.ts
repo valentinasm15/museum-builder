@@ -83,7 +83,7 @@ const S = {
   notToday: { en: "{item} is not available in today's conditions.", fi: '{item} ei ole käytettävissä tämän päivän olosuhteissa.' },
   waiting: { en: '{item} is waiting: nothing you placed uses it yet (it carries {needs}).', fi: '{item} odottaa: mikään sijoittamasi ei käytä sitä vielä (se tarvitsee: {needs}).' },
   fixRoute: { en: 'A tactile route to here ({cost}): easier to navigate, more independent.', fi: 'Opaslinja tänne ({cost}): helpompi liikkua, enemmän itsenäisyyttä.' },
-  museum: { en: 'Whole museum', fi: 'Koko museo' },
+  museum: { en: 'Whole exhibition', fi: 'Koko näyttely' },
   gapOne: { en: '{name} found something to experience in only {k} of {n} rooms.', fi: '{name} löysi koettavaa vain {k}/{n} huoneesta.' },
   gapMany: { en: '{c} visitor types found nothing to experience in any room.', fi: '{c} kävijätyyppiä ei löytänyt koettavaa yhdestäkään huoneesta.' },
   oneWay: { en: 'In {k} of {n} rooms there is only one way to take in the exhibits.', fi: '{k}/{n} huoneessa näyttelyn voi kokea vain yhdellä tavalla.' },

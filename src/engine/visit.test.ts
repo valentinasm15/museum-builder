@@ -117,7 +117,7 @@ it('stops: the last stop is always the whole museum, with notes about the whole 
   for (const lang of ['en', 'fi'] as const) {
     const s = stops(d, [], noPhone, {}, lang), end = s[s.length - 1]
     expect(end.kind).toBe('exit')
-    expect(end.name).toBe(lang === 'fi' ? 'Koko museo' : 'Whole museum')
+    expect(end.name).toBe(lang === 'fi' ? 'Koko näyttely' : 'Whole exhibition')
     expect(end.notes.length).toBeGreaterThan(0)
     expect(end.notes.join(' ')).not.toMatch(/[{}]|undefined|NaN/)
   }
