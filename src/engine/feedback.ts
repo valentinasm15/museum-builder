@@ -1,7 +1,7 @@
 import type { GameData, Persona } from '../data/load'
-import { budget, itemName, money, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
+import { budget, itemName, money, needsText, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
 import { bundles, candidates, marginalContributions, type moneyEfficiency } from './benchmark'
-import { Plan, score, type Placement, type VisitContext } from './score'
+import { Plan, score, usable, type Placement, type VisitContext } from './score'
 import { museumGap, stops, visit as walk } from './visit'
 
 export type Band = 'partial' | 'good' | 'strong'
@@ -162,6 +162,29 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
     return { key: `${x.placement.item}@${x.placement.at}`, cost: x.cost, text: local(lang, kind, vars) }
   })
   const idleKeys = new Set(idle.map((i) => i.key))
+  // Whole-museum items: what was bought and whether it did anything on a normal day (an enabler, reach, a take-away) or sits idle. Nothing here changes the score.
+  const stdPlan = new Plan(d, placements)
+  const venue = marg.filter((x) => items.get(x.placement.item)?.scope === 'venue' && x.placement.at === '').map((x) => {
+    const it = items.get(x.placement.item)!, name = itemName(lang, it), cost = money(lang, x.cost || it.costEur)
+    const miss = std.inactive.find((i) => i.placement.item === it.id && i.placement.at === '')
+    const deps = dependents(it.id), placedDeps = deps.filter((i) => placements.some((p) => p.item === i.id))
+    const worked = x.delta > 1e-9 || x.helped.length > 0
+    const carrier = deps.length > 0 && it.infoValue <= 0 && !it.reachGrant
+    let state: 'ok' | 'waiting' | 'idle' | 'missing' | 'unscored', text: string
+    if (miss) { state = 'missing'; text = t(d, lang, 'deb_v_missing', { item: name, cost, missing: needsText(d, lang, miss.missing.map((g) => g.split(' or '))) }) }
+    else if (it.kind === 'undecided' || (!carrier && !it.reachGrant && it.infoValue <= 0)) { state = 'unscored'; text = t(d, lang, 'deb_v_unscored', { item: name, cost }) }
+    else if (worked) {
+      state = 'ok'
+      text = it.reachGrant === 'plan_only' ? t(d, lang, 'deb_v_plan', { item: name, cost })
+        : it.reachGrant === 'staff_guided' ? t(d, lang, 'deb_v_staff', { item: name, cost })
+        : carrier ? t(d, lang, 'deb_v_enabled', { item: name, cost, what: placedDeps.filter((i) => stdPlan.placements.some((p) => p.item === i.id && usable(stdPlan, i.id, p.at, null))).map((i) => itemName(lang, i)).join(', ') })
+        : t(d, lang, 'deb_v_info', { item: name, cost, channel: d.texts[`ch_${it.channel}`] ? t(d, lang, `ch_${it.channel}`) : it.channel })
+    } else if (carrier && !placedDeps.length) { state = 'waiting'; text = t(d, lang, 'deb_v_waiting', { item: name, cost, needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') }) }
+    else { state = 'idle'; text = t(d, lang, it.reachGrant === 'staff_guided' ? 'deb_v_idle_staff' : 'deb_v_idle', { item: name, cost }) }
+    if (it.id === 'audio_guide_devices' && ctx.hasMuseumDevice === false) text += ` ${t(d, lang, 'deb_v_no_device')}`
+    if (it.reachGrant === 'staff_guided' && ctx.staffAvailable === false) text += ` ${t(d, lang, 'deb_v_no_staff')}`
+    return { key: `${it.id}@`, id: it.id, state, text }
+  })
   const roomsOf = (p: Persona) => d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length
   const others = d.personas.map((p) => ({ id: p.id, name: nameOf(p, lang), share: p.visitorShare, band: band(d, std.personas[p.id]), rooms: roomsOf(p), total: d.zones.length }))
   const gap = museumGap(d, placements, lang)
@@ -181,7 +204,7 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
     },
     leftOut: d.personas.filter((p) => std.leftOut.includes(p.id)).map((p) => `${nameOf(p, lang)} (${d.zones.filter((z) => std.zones[z.id][p.id].score === 0).length}/${d.zones.length})`),
     inactiveTotal, spent: std.spent, budget: budget(d),
-    idle,
+    idle, venue,
     values: marg.filter((x) => !SIDE.has(items.get(x.placement.item)?.kind ?? '') && !idleKeys.has(`${x.placement.item}@${x.placement.at}`)).sort((a, b) => b.delta - a.delta).map((x) =>
       t(d, lang, 'deb_item_value', { item: label(x.placement), cost: money(lang, x.cost), n: x.helped.length, total: d.personas.length, points: Math.round(x.delta * 100) })),
     side: marg.filter((x) => SIDE.has(items.get(x.placement.item)?.kind ?? '')).map((x) => `${label(x.placement)}: ${money(lang, x.cost)}`),

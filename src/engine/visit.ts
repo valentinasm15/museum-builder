@@ -1,4 +1,4 @@
-import type { GameData, Moment, Persona, Zone } from '../data/load'
+import type { GameData, Item, Moment, Persona, Zone } from '../data/load'
 import { helpsText, itemName, money, needsText, t, targetName, type Lang } from '../store'
 import { bundles, candidates } from './benchmark'
 import { Plan, score, usable, zoneScore, type Placement, type VisitContext } from './score'
@@ -24,8 +24,12 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
       say('walk_inactive', { item: itemName(lang, plan.items.get(x.placement.item)!), missing: needsText(d, lang, x.missing.map((g) => g.split(' or '))) }, zoneId)
   }
 
+  const note = venueNoter({ d, plan, bare: new Plan(d, placements, {}), sc, persona, ctx, lang, memo })
+  const tell = (m: Moment) => { // whole-museum items met at this moment of the visit (existing ones too)
+    for (const pl of plan.placements) if (pl.at === '' && plan.items.get(pl.item)?.scope === 'venue' && plan.items.get(pl.item)?.moment === m) { const n = note(pl); ev.push({ key: n.key, text: n.text }) }
+  }
   say('walk_enter', { persona: pname })
-  if (grants('plan_only')) say('walk_plan')
+  tell('before'); tell('entrance')
   let seen = 0, partial = 0 // partial: found only through the floor plan
   for (const z of d.zones) {
     const zn = zoneName(z, lang)
@@ -42,9 +46,17 @@ export function visit(d: GameData, placements: Placement[], persona: Persona, ct
       if (r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) say('walk_one_channel', { zone: zn }, z.id)
     }
     if (r.score > 0) { seen++; if (how === 'plan') partial++ }
+    for (const pl of plan.placements.filter((x) => x.at === z.id)) { // what makes room content work (or fail) through a whole-museum item
+      const it = plan.items.get(pl.item)!, what = itemName(lang, it), via = new Set<string>()
+      if (it.channel && it.infoValue > 0 && usable(plan, it.id, z.id, persona, memo))
+        for (const v of it.requires.flat()) if (plan.items.get(v)?.scope === 'venue' && plan.has(v, '') && usable(plan, v, '', persona, memo) && !via.has(v)) { via.add(v); say('walk_v_via', { what, item: itemName(lang, plan.items.get(v)!) }, z.id) }
+      const blocked = venueBlockers(plan, it, z.id, persona, memo)
+      if (blocked.length) say('walk_v_via_fail', { what, item: blocked.map((v) => itemName(lang, plan.items.get(v)!)).join(', ') }, z.id)
+    }
     inactive((a) => a === z.id, z.id)
   }
-  inactive((a) => !d.zones.some((z) => z.id === a))
+  inactive((a) => a !== '' && !d.zones.some((z) => z.id === a)) // route segments; whole-museum items were narrated at their moment
+  tell('exit')
   if (partial) say('walk_end_partial', { n: seen - partial, m: partial, total: d.zones.length })
   else say('walk_end', { n: seen, total: d.zones.length })
   return ev
@@ -83,6 +95,41 @@ const sx = (lang: Lang, k: keyof typeof S, v: Record<string, string | number> = 
   S[k][lang].replace(/\{(\w+)\}/g, (m, n) => (n in v ? String(v[n]) : m))
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+/** A placed whole-museum item as the visitor meets it today: ok = works for them, wait = carries nothing used yet, missing = requirement unmet, no = not for them / not today. */
+interface VenueNote { state: 'ok' | 'wait' | 'missing' | 'no'; key: string; text: string }
+interface NoteEnv { d: GameData; plan: Plan; bare: Plan; sc: ReturnType<typeof score>; persona: Persona; ctx: VisitContext; lang: Lang; memo: Map<string, boolean> }
+function venueNoter({ d, plan, bare, sc, persona, ctx, lang, memo }: NoteEnv) {
+  const nm = (id: string) => itemName(lang, plan.items.get(id)!)
+  return (pl: Placement): VenueNote => {
+    const it = plan.items.get(pl.item)!, item = nm(it.id)
+    const miss = sc.inactive.find((x) => x.placement.item === pl.item && x.placement.at === pl.at)
+    if (miss) return { state: 'missing', key: 'walk_inactive', text: t(d, lang, 'walk_inactive', { item, missing: needsText(d, lang, miss.missing.map((g) => g.split(' or '))) }) }
+    if (!usable(plan, it.id, '', persona, memo))
+      return { state: 'no', key: 'walk_venue_no', text: sx(lang, usable(bare, it.id, '', persona) ? 'notToday' : 'notForThem', { item, who: helpsText(d, lang, it) }) }
+    const ok = (key: string, vars: Record<string, string | number> = {}): VenueNote => ({ state: 'ok', key, text: t(d, lang, key, { item, ...vars }) })
+    if (it.reachGrant === 'plan_only') return ok('walk_plan')
+    if (it.reachGrant === 'staff_guided') {
+      const k = ctx.staffAvailable === false ? 'walk_v_staff_no' : persona.attrs.needsContinuousRoute ? 'walk_v_staff_cont' : 'walk_v_staff'
+      return { ...ok(k), state: k === 'walk_v_staff' ? 'ok' : 'no' }
+    }
+    const deps = d.items.filter((i) => i.requires.some((g) => g.includes(it.id)))
+    if (deps.length && it.infoValue <= 0) { // carries other items (devices, Wi-Fi): only worth something through them
+      const placed = deps.filter((i) => plan.placements.some((p) => p.item === i.id))
+      if (!placed.length) return { state: 'wait', key: 'walk_venue_waiting', text: sx(lang, 'waiting', { item, needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') }) }
+      const used = placed.filter((i) => plan.placements.some((p) => p.item === i.id && usable(plan, i.id, p.at, persona, memo)))
+      return used.length ? ok('walk_v_carrier', { what: used.map((i) => itemName(lang, i)).join(', ') }) : { ...ok('walk_v_unused'), state: 'wait' }
+    }
+    if (it.infoValue > 0 && it.channel) return ok('walk_v_info', { channel: d.texts[`ch_${it.channel}`] ? t(d, lang, `ch_${it.channel}`) : it.channel })
+    return ok('walk_v_unscored')
+  }
+}
+/** Venue items a room item relies on that this visitor cannot use today, when that (and nothing else) is why the room item fails for them. */
+function venueBlockers(plan: Plan, it: Item, at: string, persona: Persona, memo: Map<string, boolean>): string[] {
+  if (!(it.reach === 'all' || persona.attrs[it.reach] === true)) return []
+  if (!usable(plan, it.id, at, null, memo) || usable(plan, it.id, at, persona, memo)) return []
+  return [...new Set(it.requires.flat())].filter((r) => plan.items.get(r)?.scope === 'venue' && plan.has(r, '') && !usable(plan, r, '', persona, memo))
+}
+
 export function stops(d: GameData, placements: Placement[], persona: Persona, ctx: VisitContext = {}, lang: Lang = 'en'): Stop[] {
   const plan = new Plan(d, placements, ctx), bare = new Plan(d, placements, {}) // bare = a normal day
   const sc = score(d, placements, ctx), memo = new Map<string, boolean>()
@@ -90,19 +137,19 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
   const route = d.items.find((i) => i.scope === 'path')
   const nm = (id: string) => itemName(lang, plan.items.get(id)!)
   const key = (p: Placement) => `${p.item}@${p.at}`
-  const dependents = (id: string) => d.items.filter((i) => i.requires.some((g) => g.includes(id)))
   const viaOf = (id: string) => (plan.items.get(id)?.requires.flat() ?? []).filter((r) => plan.items.get(r)?.scope === 'venue' && plan.has(r, ''))
 
+  const note = venueNoter({ d, plan, bare, sc, persona, ctx, lang, memo })
   /** One placed item: does it work for this persona today, and if not, why. */
   const verdict = (pl: Placement): { ok: boolean; line: StopLine } => {
     const it = plan.items.get(pl.item)!, miss = sc.inactive.find((x) => key(x.placement) === key(pl))
+    if (it.scope === 'venue') { const n = note(pl); return { ok: n.state === 'ok', line: n.state === 'ok' ? { text: n.text, via: viaOf(it.id) } : { text: n.text } } }
+    const blocked = venueBlockers(plan, it, pl.at, persona, memo)
+    if (!miss && blocked.length) return { ok: false, line: { text: t(d, lang, 'walk_v_via_fail', { what: nm(it.id), item: blocked.map(nm).join(', ') }) } }
     if (miss && miss.missing.every((g) => g === 'route')) return { ok: false, line: { text: t(d, lang, 'walk_inactive_route', { item: nm(it.id) }) } }
     if (miss) return { ok: false, line: { text: t(d, lang, 'walk_inactive', { item: nm(it.id), missing: needsText(d, lang, miss.missing.map((g) => g.split(' or '))) }) } }
     if (!usable(plan, it.id, pl.at, persona, memo))
       return { ok: false, line: { text: usable(bare, it.id, pl.at, persona) ? sx(lang, 'notToday', { item: nm(it.id) }) : sx(lang, 'notForThem', { item: nm(it.id), who: helpsText(d, lang, it) }) } }
-    const deps = dependents(it.id)
-    if (it.scope === 'venue' && deps.length && !deps.some((i) => plan.placements.some((p) => p.item === i.id)))
-      return { ok: false, line: { text: sx(lang, 'waiting', { item: nm(it.id), needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') }) } }
     return { ok: true, line: { text: nm(it.id), via: viaOf(it.id) } }
   }
 
@@ -129,6 +176,11 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
       text: cap(t(d, lang, `ch_${c}`)),
       via: [...new Set(verdicts.filter((x) => x.v.ok && plan.items.get(x.p.item)?.channel === c).flatMap((x) => x.v.line.via ?? []))],
     }))
+    const grantors = (g: string) => plan.placements.filter((p) => plan.items.get(p.item)?.reachGrant === g && usable(plan, p.item, p.at, persona, memo)).map((p) => p.item)
+    const getsHere: StopLine[] = [ // how the visitor got here, and the whole-museum item behind it; shown even when the room itself has nothing to use
+      ...(keys.includes('walk_reach_staff') ? [{ text: t(d, lang, 'walk_room_staff'), via: grantors('staff_guided') }] : []),
+      ...(keys.includes('walk_reach_plan') ? [{ text: t(d, lang, 'walk_room_plan'), via: grantors('plan_only') }] : []),
+    ]
     const fails: StopLine[] = []
     const missing = path.filter((s) => !plan.segmentExists(s))
     const routeFix: StopFix | undefined = route && missing.length
@@ -166,7 +218,7 @@ export function stops(d: GameData, placements: Placement[], persona: Persona, ct
     }
     for (const x of verdicts) if (!x.v.ok) fails.push(x.v.line)
     if (status === 'full' && r.channels.filter((c) => c !== 'visual').length < d.scoring.min_channels_full_value) { oneWay++; fails.push({ text: t(d, lang, 'walk_one_channel', { zone: zn }) }) }
-    out.push({ id: z.id, kind: 'room', zoneId: z.id, name: `${zn}`, status, works: status === 'full' || status === 'partial' ? works : [], fails, path, breakAt, notes: [] })
+    out.push({ id: z.id, kind: 'room', zoneId: z.id, name: `${zn}`, status, works: [...getsHere, ...(status === 'full' || status === 'partial' ? works : [])], fails, path, breakAt, notes: [] })
   })
 
   // The last stop is always there: the whole museum, with exit items (take-away catalogues) and a few lines about the visit as a whole.

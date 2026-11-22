@@ -140,3 +140,83 @@ it('a screen with no followable film gets a line and a fix; with captions or des
   const noScreen = d.zones.find((z) => !z.hasScreen)!
   expect(stops(d, [], low).find((x) => x.zoneId === noScreen.id)!.fails.some((f) => /film plays/.test(f.text))).toBe(false)
 })
+
+// ---- whole-museum (venue) items in the walkthrough ----
+const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
+const walk = (ps: ReturnType<typeof P>[], ctx = {}, p = noPhone, lang: 'en' | 'fi' = 'en') => visit(d, ps, p, ctx, lang)
+const clean = (texts: string[]) => expect(texts.join(' ')).not.toMatch(/[{}]|undefined|NaN|\[/)
+
+it('venue: the entrance stop lists the floor plan and placed devices; devices alone wait and add no access', () => {
+  const ps = [P('audio_guide_devices', '')]
+  const ent = stops(d, ps, noPhone, { hasMuseumDevice: true }).find((x) => x.kind === 'entrance')!
+  expect(ent.works.some((w) => /floor plan/i.test(w.text))).toBe(true) // existing item, narrated at the entrance
+  expect(ent.fails.some((f) => /Audio guide devices/.test(f.text) && /waiting/.test(f.text))).toBe(true)
+  expect(ent.works.some((w) => /Audio guide devices/.test(w.text))).toBe(false)
+  const ev = walk(ps, { hasMuseumDevice: true })
+  expect(ev.some((e) => e.key === 'walk_venue_waiting' && /Audio guide devices/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_v_carrier' || e.key === 'walk_v_via')).toBe(false)
+  expect(score(d, ps).overall).toBe(score(d, []).overall) // info_value 0: no direct effect on the score
+})
+
+it('venue: devices with audio description in a reachable room are narrated as working, at the entrance and in the room', () => {
+  const ps = [P('audio_guide_devices', ''), P('audio_description', near.id)]
+  const ev = walk(ps, { hasMuseumDevice: true })
+  expect(ev.some((e) => e.key === 'walk_v_carrier' && /Audio guide devices/.test(e.text) && /Audio description/.test(e.text))).toBe(true)
+  const inRoom = ev.find((e) => e.key === 'walk_v_via' && e.zoneId === near.id)
+  expect(inRoom?.text).toMatch(/Audio guide devices/)
+  expect(ev.findIndex((e) => e.key === 'walk_v_carrier')).toBeLessThan(ev.findIndex((e) => e.key === 'walk_v_via')) // entrance before the room
+  const s = stops(d, ps, noPhone, { hasMuseumDevice: true })
+  expect(s.find((x) => x.kind === 'entrance')!.works.some((w) => /Audio guide devices/.test(w.text))).toBe(true)
+  expect(s.find((x) => x.zoneId === near.id)!.works.some((w) => w.via?.includes('audio_guide_devices'))).toBe(true)
+})
+
+it('venue: no device to lend today is named as the reason the room audio fails', () => {
+  const ps = [P('audio_guide_devices', ''), P('audio_description', near.id)]
+  const ev = walk(ps, { hasMuseumDevice: false })
+  expect(ev.some((e) => e.key === 'walk_v_via_fail' && e.zoneId === near.id && /Audio guide devices/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_v_via')).toBe(false)
+  const room = stops(d, ps, noPhone, { hasMuseumDevice: false }).find((x) => x.zoneId === near.id)!
+  expect(room.fails.some((f) => /relies on Audio guide devices/.test(f.text))).toBe(true)
+})
+
+it('venue: audio description with no device or phone is narrated as missing a requirement', () => {
+  const ev = walk([P('audio_description', near.id)])
+  expect(ev.some((e) => e.key === 'walk_inactive' && e.zoneId === near.id && /Audio guide devices/.test(e.text))).toBe(true)
+})
+
+it('venue: staff training is narrated at the entrance and in the rooms it guides to; not when nobody is on duty', () => {
+  const ps = [P('staff_training', '')]
+  const ev = walk(ps)
+  expect(ev.some((e) => e.key === 'walk_v_staff')).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_reach_staff' && e.zoneId === back.id)).toBe(true)
+  const s = stops(d, ps, noPhone)
+  expect(s.find((x) => x.kind === 'entrance')!.works.some((w) => /Staff training/.test(w.text))).toBe(true)
+  expect(s.find((x) => x.zoneId === back.id)!.works.some((w) => w.via?.includes('staff_training'))).toBe(true)
+  const off = walk(ps, { staffAvailable: false })
+  expect(off.some((e) => e.key === 'walk_v_staff_no')).toBe(true)
+  expect(off.some((e) => e.key === 'walk_reach_staff')).toBe(false)
+  const need = d.personas.find((p) => p.attrs.needsContinuousRoute)!
+  expect(walk(ps, {}, need).some((e) => e.key === 'walk_v_staff_cont')).toBe(true)
+})
+
+it('venue: website and take-aways are narrated at their moment; the website does not touch the score', () => {
+  const ps = [P('website_info', ''), P('large_print_catalogue', '')]
+  const low = d.personas.find((p) => p.attrs.residualVision)!
+  const s = stops(d, ps, low)
+  expect(s[0].kind).toBe('before')
+  expect(s[0].works.some((w) => /website/i.test(w.text) && /does not change the access score/.test(w.text))).toBe(true)
+  expect(s[s.length - 1].works.some((w) => /catalogue/i.test(w.text))).toBe(true)
+  const ev = walk(ps, {}, low)
+  const k = ev.map((e) => e.key)
+  expect(k.indexOf('walk_v_unscored')).toBeLessThan(k.indexOf('walk_v_info')) // before the visit, then the exit item
+  expect(k.indexOf('walk_v_info')).toBeGreaterThan(k.lastIndexOf('walk_no_info') - 1)
+  expect(score(d, [P('website_info', '')]).overall).toBe(score(d, []).overall)
+})
+
+it('venue: every walkthrough line is filled in, EN and FI', () => {
+  const all = [P('audio_guide_devices', ''), P('audio_description', near.id), P('staff_training', ''), P('website_info', ''), P('visitor_wifi', ''), P('braille_catalogue', '')]
+  for (const lang of ['en', 'fi'] as const) for (const ctx of [{}, { hasMuseumDevice: false, staffAvailable: false }]) {
+    clean(walk(all, ctx, noPhone, lang).map((e) => e.text))
+    clean(stops(d, all, noPhone, ctx, lang).flatMap((x) => [...x.works.map((w) => w.text), ...x.fails.map((f) => f.text)]))
+  }
+})
