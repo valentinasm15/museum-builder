@@ -75,7 +75,7 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
           </>}
           {step === 1 && <>
             {pn && sn && <p><strong>{t(d, lang, 'intro_visitor', { persona: pn, situation: sn })}</strong></p>}
-            <details><summary>{t(d, lang, 'intro_all_visitors')}</summary><ul>{d.personas.map((p) => <li key={p.id}>{(lang === 'fi' && p.nameFi) || p.name}</li>)}</ul></details>
+            <p>{t(d, lang, 'intro_all_visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join('; ')}</p>
           </>}
           {step >= 2 && step < last && <p>{t(d, lang, `intro_${step - 1}`)}</p>}
           {step === last && <>

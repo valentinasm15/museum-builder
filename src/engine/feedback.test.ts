@@ -1,12 +1,19 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { loadData } from '../data/load'
+import { loadData, type GameData } from '../data/load'
 import { money, type Visit } from '../store'
 import { moneyEfficiency } from './benchmark'
 import { band, debrief, efficiency, nextStep, tradeoffs } from './feedback'
 import { score } from './score'
 
-const d = loadData(readFileSync('src/data/museum-builder-data.xlsx'))
+// Test-only variants (visitorShare 0): the shipped workbook has 4 personas, but these engine rules still need covering.
+const withVariants = (g: GameData): GameData => {
+  const by = (id: string) => g.personas.find((p) => p.id === id)!
+  const mk = (id: string, from: string, attrs: Record<string, boolean>) => ({ ...by(from), id, visitorShare: 0, attrs: { ...by(from).attrs, ...attrs } })
+  return { ...g, personas: [...g.personas, mk('low_vision_with_touch', 'low_vision_central', { comfortableWithTouch: true, needsMagnification: false }), mk('low_vision_glare', 'low_vision_central', { glareSensitive: true, needsMagnification: false }),
+    mk('low_vision_no_smartphone', 'low_vision_central', { usesSmartphone: false }), mk('blind_no_smartphone', 'blind_non_braille', { usesSmartphone: false })] }
+}
+const d = withVariants(loadData(readFileSync('src/data/museum-builder-data.xlsx')))
 const sit = (id: string) => d.situations.find((s) => s.id === id)!.id
 const v = (situationId: string): Visit => ({ personaId: d.personas[0].id, situationId: sit(situationId) })
 const cost = (id: string) => d.items.find((i) => i.id === id)!.costEur

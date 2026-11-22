@@ -1,7 +1,7 @@
 import type { Item } from '../data/load'
 
 export const P = {
-  floor: '#cfc6b8', line: '#b9ae9d', base: '#5c4a3a', wall: '#d8cbb5', trim: '#d98f94', wood: '#2f6f85', ring: '#f5f0e6',
+  floor: '#cfc6b8', line: '#b9ae9d', base: '#5c4a3a', wall: '#d8cbb5', trim: '#d98f94', wood: '#2f6f85', ring: '#1f4fd8',
   yellow: '#f2c230', amber: '#d9a21b', blue: '#7fb0e8', green: '#5f9b6e', plum: '#9a6aa8', neutral: '#a79a8a', dim: '#b8b2a8',
 }
 
