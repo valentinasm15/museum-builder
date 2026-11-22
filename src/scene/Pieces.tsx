@@ -1,9 +1,17 @@
 import { Edges, Html, RoundedBox } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Group } from 'three'
 import type { GameData, Item, Segment } from '../data/load'
 import { lookOf, P, type Shape } from './look'
+
+/** Pointer cursor + hover flag for clickable 3D meshes (pointer-only cue; keyboard users have the labels). */
+function useHover() {
+  const [hover, set] = useState(false)
+  useEffect(() => () => { document.body.style.cursor = '' }, [])
+  const on = (v: boolean) => { set(v); document.body.style.cursor = v ? 'pointer' : '' }
+  return { hover, bind: { onPointerOver: (e: { stopPropagation(): void }) => { e.stopPropagation(); on(true) }, onPointerOut: () => on(false) } }
+}
 
 /** Grid tile (x, y) → world [x, z], floor centred on the origin. */
 export const world = (d: GameData, x: number, y: number): [number, number] => [x - d.settings.grid_w / 2, y - d.settings.grid_h / 2]
@@ -29,9 +37,11 @@ export function ItemRow({ y, items, names, inline }: { y: [number, number]; name
 export function ItemBlock({ item, pos, active, inspected, onInspect }: { item: Item; pos: [number, number, number]; active: boolean; inspected: boolean; onInspect: () => void }) {
   const look = lookOf(item)
   const h = HEIGHT[look.shape]
-  const mat = <meshStandardMaterial color={active ? look.color : P.dim} transparent={!active} opacity={active ? 1 : 0.5} roughness={0.7} emissive={inspected ? '#f2c230' : '#000000'} emissiveIntensity={inspected ? 0.6 : 0} />
+  const { hover, bind } = useHover()
+  const lit = inspected || hover
+  const mat = <meshStandardMaterial color={active ? look.color : P.dim} transparent={!active} opacity={active ? 1 : 0.5} roughness={0.7} emissive={lit ? '#f2c230' : '#000000'} emissiveIntensity={inspected ? 0.6 : hover ? 0.35 : 0} />
   return (
-    <group position={pos} onClick={(e) => { e.stopPropagation(); onInspect() }}>
+    <group position={pos} {...bind} onClick={(e) => { e.stopPropagation(); onInspect() }}>
       <group position={[0, h / 2, 0]}>
         {look.shape === 'cyl' && <mesh castShadow><cylinderGeometry args={[0.26, 0.26, h, 24]} />{mat}{!active && <Edges color="#6b6458" />}</mesh>}
         {look.shape === 'cone' && <mesh castShadow><coneGeometry args={[0.28, h, 24]} />{mat}{!active && <Edges color="#6b6458" />}</mesh>}
@@ -48,13 +58,14 @@ export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, chips,
   d: GameData; x: number; y: number; w: number; h: number; up?: number; label: string; num: string | number; hint?: string; mark?: { icon: string; text: string }; chips?: ReactNode; selected: boolean; target?: boolean; onPick: () => void; children?: ReactNode
 }) {
   const [cx, cz] = world(d, x + w / 2, y + h / 2)
+  const { hover, bind } = useHover()
   return (
     <group position={[cx, 0, cz]}>
       {(selected || target) && <RoundedBox args={[w + 0.4, 0.1, h + 0.4]} radius={0.1} position={[0, 0.05, 0]}>
         <meshStandardMaterial color={P.ring} transparent={!selected} opacity={selected ? 1 : 0.45} /></RoundedBox>}
-      <RoundedBox args={[w, 0.18, h]} radius={0.08} position={[0, 0.09, 0]} castShadow receiveShadow
+      <RoundedBox args={[w, 0.18, h]} radius={0.08} position={[0, 0.09, 0]} castShadow receiveShadow {...bind}
         onClick={(e) => { e.stopPropagation(); onPick() }}>
-        <meshStandardMaterial color={P.wood} roughness={0.8} />
+        <meshStandardMaterial color={P.wood} roughness={0.8} emissive={hover ? '#f2c230' : '#000000'} emissiveIntensity={hover ? 0.35 : 0} />
       </RoundedBox>
       {children}
       <Html position={[w > 4 ? 0 : w / 2 - 0.2, 0.9 + up, h / 2 + 0.55]} center zIndexRange={[10, 0]}> {/* just outside the platform edge, so it never covers the items */}
@@ -68,15 +79,16 @@ export function Platform({ d, x, y, w, h, up = 0, label, num, hint, mark, chips,
 export function RouteStrip({ d, s, built, selected, onPick }: { d: GameData; s: Segment; built: boolean; selected?: boolean; onPick: () => void }) {
   const dx = Math.abs(s.x2 - s.x1), dz = Math.abs(s.y2 - s.y1), len = dx + dz
   const horiz = dx > 0
+  const { hover, bind } = useHover()
   const [cx, cz] = world(d, (s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2)
   const size: [number, number, number] = horiz ? [len + 0.9, 0.06, 0.9] : [0.9, 0.06, len + 0.9]
   const ribs = built ? Math.floor((len + 0.9) / 0.3) : 0
   return (
     <group position={[cx, 0.03, cz]}>
       {selected && <mesh position={[0, -0.005, 0]}><boxGeometry args={[size[0] + 0.4, 0.05, size[2] + 0.4]} /><meshStandardMaterial color={P.base} /></mesh>}
-      <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onPick() }}>
+      <mesh receiveShadow {...bind} onClick={(e) => { e.stopPropagation(); onPick() }}>
         <boxGeometry args={size} />
-        <meshStandardMaterial color={P.yellow} transparent={!built} opacity={built ? 1 : 0.2} roughness={0.6} />
+        <meshStandardMaterial color={P.yellow} transparent={!built} opacity={hover && !built ? 0.45 : built ? 1 : 0.2} roughness={0.6} emissive={hover ? '#f2c230' : '#000000'} emissiveIntensity={hover ? 0.3 : 0} />
         {!built && <Edges color="#7a5c00" />}
       </mesh>
       {Array.from({ length: ribs }, (_, i) => {
