@@ -131,7 +131,7 @@ it('debrief lists whole-museum items: waiting devices, working devices, staff, w
   expect(used.audio_guide_devices.state).toBe('ok')
   expect(used.audio_guide_devices.text).toMatch(/usable in the rooms/)
   const today = debrief(d, [{ item: 'audio_guide_devices', at: '' }], v('without_audio_guide'), 'en').venue[0]
-  expect(today.text).toMatch(/no devices to lend/)
+  expect(today.text).toMatch(/no audio guides to lend/)
   for (const lang of ['en', 'fi'] as const)
     for (const x of Object.values(by([{ item: 'audio_guide_devices', at: '' }, { item: 'staff_training', at: '' }, { item: 'website_info', at: '' }, { item: 'visitor_wifi', at: '' }], lang)))
       expect(x.text).not.toMatch(/[{}]|undefined|NaN/)

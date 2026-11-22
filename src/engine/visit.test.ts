@@ -144,16 +144,17 @@ it('a screen with no followable film gets a line and a fix; with captions or des
 // ---- whole-museum (venue) items in the walkthrough ----
 const near = d.zones.find((z) => new Plan(d, []).routeComplete(z))!
 const walk = (ps: ReturnType<typeof P>[], ctx = {}, p = noPhone, lang: 'en' | 'fi' = 'en') => visit(d, ps, p, ctx, lang)
+const DEV = d.items.find((i) => i.id === 'audio_guide_devices')!.name, AD = d.items.find((i) => i.id === 'audio_description')!.name // names live in the sheet
 const clean = (texts: string[]) => expect(texts.join(' ')).not.toMatch(/[{}]|undefined|NaN|\[/)
 
 it('venue: the entrance stop lists the floor plan and placed devices; devices alone wait and add no access', () => {
   const ps = [P('audio_guide_devices', '')]
   const ent = stops(d, ps, noPhone, { hasMuseumDevice: true }).find((x) => x.kind === 'entrance')!
   expect(ent.works.some((w) => /floor plan/i.test(w.text))).toBe(true) // existing item, narrated at the entrance
-  expect(ent.fails.some((f) => /Audio guide devices/.test(f.text) && /waiting/.test(f.text))).toBe(true)
-  expect(ent.works.some((w) => /Audio guide devices/.test(w.text))).toBe(false)
+  expect(ent.fails.some((f) => f.text.includes(DEV) && /waiting/.test(f.text))).toBe(true)
+  expect(ent.works.some((w) => w.text.includes(DEV))).toBe(false)
   const ev = walk(ps, { hasMuseumDevice: true })
-  expect(ev.some((e) => e.key === 'walk_venue_waiting' && /Audio guide devices/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_venue_waiting' && e.text.includes(DEV))).toBe(true)
   expect(ev.some((e) => e.key === 'walk_v_carrier' || e.key === 'walk_v_via')).toBe(false)
   expect(score(d, ps).overall).toBe(score(d, []).overall) // info_value 0: no direct effect on the score
 })
@@ -161,27 +162,27 @@ it('venue: the entrance stop lists the floor plan and placed devices; devices al
 it('venue: devices with audio description in a reachable room are narrated as working, at the entrance and in the room', () => {
   const ps = [P('audio_guide_devices', ''), P('audio_description', near.id)]
   const ev = walk(ps, { hasMuseumDevice: true })
-  expect(ev.some((e) => e.key === 'walk_v_carrier' && /Audio guide devices/.test(e.text) && /Audio description/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_v_carrier' && e.text.includes(DEV) && e.text.includes(AD))).toBe(true)
   const inRoom = ev.find((e) => e.key === 'walk_v_via' && e.zoneId === near.id)
-  expect(inRoom?.text).toMatch(/Audio guide devices/)
+  expect(inRoom?.text).toContain(DEV)
   expect(ev.findIndex((e) => e.key === 'walk_v_carrier')).toBeLessThan(ev.findIndex((e) => e.key === 'walk_v_via')) // entrance before the room
   const s = stops(d, ps, noPhone, { hasMuseumDevice: true })
-  expect(s.find((x) => x.kind === 'entrance')!.works.some((w) => /Audio guide devices/.test(w.text))).toBe(true)
+  expect(s.find((x) => x.kind === 'entrance')!.works.some((w) => w.text.includes(DEV))).toBe(true)
   expect(s.find((x) => x.zoneId === near.id)!.works.some((w) => w.via?.includes('audio_guide_devices'))).toBe(true)
 })
 
 it('venue: no device to lend today is named as the reason the room audio fails', () => {
   const ps = [P('audio_guide_devices', ''), P('audio_description', near.id)]
   const ev = walk(ps, { hasMuseumDevice: false })
-  expect(ev.some((e) => e.key === 'walk_v_via_fail' && e.zoneId === near.id && /Audio guide devices/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_v_via_fail' && e.zoneId === near.id && e.text.includes(DEV))).toBe(true)
   expect(ev.some((e) => e.key === 'walk_v_via')).toBe(false)
   const room = stops(d, ps, noPhone, { hasMuseumDevice: false }).find((x) => x.zoneId === near.id)!
-  expect(room.fails.some((f) => /relies on Audio guide devices/.test(f.text))).toBe(true)
+  expect(room.fails.some((f) => f.text.includes(`relies on ${DEV}`))).toBe(true)
 })
 
 it('venue: audio description with no device or phone is narrated as missing a requirement', () => {
   const ev = walk([P('audio_description', near.id)])
-  expect(ev.some((e) => e.key === 'walk_inactive' && e.zoneId === near.id && /Audio guide devices/.test(e.text))).toBe(true)
+  expect(ev.some((e) => e.key === 'walk_inactive' && e.zoneId === near.id && e.text.includes(DEV))).toBe(true)
 })
 
 it('venue: staff training is narrated at the entrance and in the rooms it guides to; not when nobody is on duty', () => {
