@@ -41,7 +41,7 @@ export default function App() {
         <Budget d={d} />
         <nav className="hud-right">
           <button type="button" className="submit" onClick={() => setLaunch(true)}>{t(d, lang, 'open_museum')}</button>
-          <button type="button" className="icon" aria-label={t(d, lang, 'intro_help')} title={t(d, lang, 'intro_help')} onClick={() => setIntro(true)}><span aria-hidden="true" className="q">?</span></button>
+          <button type="button" className="icon" aria-label={t(d, lang, 'intro_help')} title={t(d, lang, 'intro_help')} onClick={() => setIntro(true)}><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="M8 5v14l11-7z" fill="currentColor" /></svg></button>
           <A11yMenu d={d} />
           <Menu id="lang-panel" label={t(d, lang, 'language')} icon={<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><ellipse cx="12" cy="12" rx="4.2" ry="10" /><path d="M2 12h20M3.5 7h17M3.5 17h17" /></svg>}>
             {(close) => (
