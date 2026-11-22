@@ -43,3 +43,26 @@ export default function ItemInfo({ d }: { d: GameData }) {
     </section>
   )
 }
+
+/** Room summary: select a room on the map or in the summary tab and its description opens on the map, like the item card. */
+export function ZoneInfo({ d }: { d: GameData }) {
+  const { lang, focus, setFocus, selected, phase, inspect } = useGame()
+  const z = d.zones.find((x) => x.id === focus)
+  const about = z && ((lang === 'fi' && z.aboutFi) || z.about)
+  useEffect(() => {
+    if (!z) return
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setFocus(null) }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [z, setFocus])
+  if (!z || !about || selected || inspect || phase !== 'planning') return null // not while placing an item, reading an item card, or in the walkthrough/debrief (they show it themselves)
+  const close = lang === 'fi' ? 'Sulje' : 'Close'
+  const name = (lang === 'fi' && z.nameFi) || z.nameEn
+  return (
+    <section className="iteminfo zone" role="region" aria-label={`${name} · ${t(d, lang, 'about_room')}`}>
+      <button type="button" className="xbtn" aria-label={close} title={close} onClick={() => setFocus(null)}><span aria-hidden="true">✕</span></button>
+      <h3>{name}<span className="note"> · {t(d, lang, 'about_room')}</span></h3>
+      <p>{about}</p>
+    </section>
+  )
+}

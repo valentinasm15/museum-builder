@@ -70,7 +70,7 @@ function Detail({ d, item }: { d: GameData; item: Item }) {
 }
 
 export default function Catalogue({ d }: { d: GameData }) {
-  const { lang, placements, selected, select, focus } = useGame()
+  const { lang, placements, selected, select } = useGame()
   const [tab, setTab] = useState<Tab>('zone')
   useEffect(() => { // the skip link in the Accessibility menu points at #room-h
     const go = () => { if (location.hash === '#room-h') { setTab('room'); setTimeout(() => document.getElementById('room-h')?.focus()) } }
@@ -79,7 +79,6 @@ export default function Catalogue({ d }: { d: GameData }) {
   }, [])
   const left = remaining(d, placements)
   const picked = d.items.find((i) => i.id === selected)
-  const fz = d.zones.find((z) => z.id === focus), about = fz && ((lang === 'fi' && fz.aboutFi) || fz.about)
   return (
     <section aria-labelledby="cat-h" className="toolkit">
       <h2 id="cat-h" className="sr">{t(d, lang, 'catalogue')}</h2>
@@ -90,7 +89,6 @@ export default function Catalogue({ d }: { d: GameData }) {
       </div>
       {tab === 'room' ? <Room d={d} /> : <>
       <p className="hint">{t(d, lang, HINT[tab])}</p>
-      <div aria-live="polite" className="aboutwrap">{fz && about && <div className="detail about"><h3>{(lang === 'fi' && fz.nameFi) || fz.nameEn} · {t(d, lang, 'about_room')}</h3><p>{about}</p></div>}</div>
       <ul className="tiles">
         {d.items.filter((i) => i.costEur > 0 && i.scope === tab).map((i) => {
           const venue = i.scope === 'venue'
