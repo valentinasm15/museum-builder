@@ -181,8 +181,10 @@ export function debrief(d: GameData, placements: Placement[], v: Visit, lang: La
         : t(d, lang, 'deb_v_info', { item: name, cost, channel: d.texts[`ch_${it.channel}`] ? t(d, lang, `ch_${it.channel}`) : it.channel })
     } else if (carrier && !placedDeps.length) { state = 'waiting'; text = t(d, lang, 'deb_v_waiting', { item: name, cost, needs: deps.slice(0, 2).map((i) => itemName(lang, i)).join(', ') }) }
     else { state = 'idle'; text = t(d, lang, it.reachGrant === 'staff_guided' ? 'deb_v_idle_staff' : 'deb_v_idle', { item: name, cost }) }
-    if (it.id === 'audio_guide_devices' && ctx.hasMuseumDevice === false) text += ` ${t(d, lang, 'deb_v_no_device')}`
-    if (it.reachGrant === 'staff_guided' && ctx.staffAvailable === false) text += ` ${t(d, lang, 'deb_v_no_staff')}`
+    // Today's conditions: a day with no guides to lend or nobody on duty turns "works" into "did not help today" instead of contradicting itself.
+    const offToday = (it.id === 'audio_guide_devices' && ctx.hasMuseumDevice === false) ? 'deb_v_device_off' : (it.reachGrant === 'staff_guided' && ctx.staffAvailable === false) ? 'deb_v_staff_off' : ''
+    if (offToday && state === 'ok') { state = 'idle'; text = t(d, lang, offToday, { item: name, cost }) }
+    else if (offToday === 'deb_v_device_off') text += ` ${t(d, lang, 'deb_v_no_device')}`
     return { key: `${it.id}@`, id: it.id, state, text }
   })
   const roomsOf = (p: Persona) => d.zones.filter((z) => std.zones[z.id][p.id].score > 0).length

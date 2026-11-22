@@ -135,5 +135,11 @@ it('debrief lists whole-museum items: waiting devices, working devices, staff, w
   for (const lang of ['en', 'fi'] as const)
     for (const x of Object.values(by([{ item: 'audio_guide_devices', at: '' }, { item: 'staff_training', at: '' }, { item: 'website_info', at: '' }, { item: 'visitor_wifi', at: '' }], lang)))
       expect(x.text).not.toMatch(/[{}]|undefined|NaN/)
+  for (const x of Object.values(used)) expect(x.text).not.toMatch(/\)\s\(€/) // no "(name) (€cost)"
+  // a day with nobody on duty / no guides to lend does not read "works"
+  const staffDay = debrief(d, [{ item: 'staff_training', at: '' }], v('unstaffed_hours'), 'en').venue[0]
+  expect(staffDay.state).toBe('idle'); expect(staffDay.text).toMatch(/did not help this visitor today/); expect(staffDay.text).not.toMatch(/: works/)
+  const devDay = debrief(d, [{ item: 'audio_guide_devices', at: '' }, { item: 'audio_description', at: near.id }], v('without_audio_guide'), 'en').venue[0]
+  expect(devDay.state).toBe('idle'); expect(devDay.text).toMatch(/no audio guides to lend/); expect(devDay.text).not.toMatch(/: works/)
   expect(debrief(d, [{ item: 'braille_label', at: d.zones[0].id }], v('with_audio_guide'), 'en').venue).toEqual([]) // zone items only: no venue list
 })
