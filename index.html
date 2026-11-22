@@ -78,7 +78,7 @@
       .lblstack { display: flex; flex-direction: column; align-items: center; gap: .25rem; } .iteminfo.zone { border-left-color: #2f6f85; } .iteminfo.ok { border-left-color: #1f5d34; } .iteminfo.wait { border-left-color: #b7791f; } .iteminfo h3 { margin: 0 0 .25rem; font-size: 1rem; } .iteminfo p { margin: .25rem 0; font-size: .9375rem; } .iteminfo .status { font-weight: 700; } .iteminfo.ok .status { color: #1f5d34; } .iteminfo.wait .status { color: #7a4d00; }
       .loader { position: fixed; inset: 0; display: grid; place-items: center; align-content: center; background: #2b2118; margin: 0; } .loader-logo { width: min(42vw, 11rem); height: auto; display: block; } .loader-grey { filter: grayscale(1) brightness(.75); opacity: .55; }
       .zmark { margin-left: .25rem; } .elabel.bad { background: #a3001b; }
-      .debrief { max-width: 42rem; width: calc(100vw - 1rem); max-height: 92vh; overflow-y: auto; }
+      .debrief { max-width: 42rem; width: calc(100vw - 1rem); max-height: 92vh; overflow: hidden; padding: 0; } .debrief[open] { display: flex; flex-direction: column; } .deb-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1.25rem 1.5rem; }
       .debrief section { border-top: 2px solid #c9b48c; padding-top: .5rem; margin-top: .75rem; } .debrief h3 { margin: .25rem 0 .5rem; } .debrief h4 { margin: .75rem 0 .25rem; }
       .debrief .verdict { font-size: 1.125rem; margin: .25rem 0; } .deb-nav { display: flex; flex-wrap: wrap; gap: .25rem 1rem; list-style: none; padding: 0; margin: .5rem 0 0; } .deb-nav li { margin: 0; }
       .band { display: inline-block; padding: .05rem .5rem; border-radius: .25rem; font-weight: 700; color: #fff; } .band.strong { background: #1f5d34; } .band.good { background: #7a5a00; } .band.partial { background: #8e2a1a; }
@@ -89,6 +89,7 @@
       .hud button.submit { background: #f2c230; border-color: #f2c230; color: #2b2118; font-weight: 800; }
       .hud button.submit:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
       .hud .budget { min-width: 0; } .hud .visitor { margin: 0 0 .25rem; min-width: 0; font-size: .8125rem; text-align: center; line-height: 1.25; overflow-wrap: anywhere; color: #e8dcc4; }
+      .hud .visitor { width: fit-content; max-width: 100%; margin-inline: auto; padding: .125rem .75rem; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: .9375rem; } .hud .visitor .rd { background: #f2c230; color: #2b2118; border-radius: 999px; padding: 0 .5rem; font-weight: 800; margin-right: .25rem; white-space: nowrap; }
       .hud-right { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1rem; align-items: center; }
       .hud button { min-height: 2.25rem; }
       main { max-width: none; padding: 0; }

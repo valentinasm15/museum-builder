@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { GameData } from '../data/load'
-import { local } from '../engine/feedback'
+import { local, visitorTraits } from '../engine/feedback'
 import { budget, levelName, money, t, useGame } from '../store'
 
-// Steps 0-1 are the mission and the visitor card; 2-6 point at a part of the screen (6 = the launch button). The highlight is decoration: every step is also plain text.
-const TARGETS = ['', '', '.toolkit', '.play > .scene', '.toolkit .tiles', 'header .budget', 'header .submit']
+// Steps 0-2 are the mission, the rounds card and the visitor card; 3-7 point at a part of the screen (6 = the launch button). The highlight is decoration: every step is also plain text.
+const TARGETS = ['', '', '.hud .visitor', '.toolkit', '.play > .scene', '.toolkit .tiles', 'header .budget', 'header .submit']
 
 export default function Intro({ d, open, onClose }: { d: GameData; open: boolean; onClose: () => void }) {
   const { lang, level, setLevel, visit } = useGame()
@@ -57,10 +57,9 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
         <button type="button" className="xbtn" aria-label={lang === 'fi' ? 'Sulje' : 'Close'} title={lang === 'fi' ? 'Sulje' : 'Close'} onClick={() => ref.current?.close()}><span aria-hidden="true">✕</span></button>
         <div aria-live="polite">
           <p className="note">{eyebrow}</p>
-          <h2 id="intro-h">{t(d, lang, `intro_h${step}`)}</h2>
+          <h2 id="intro-h">{step === 1 ? local(lang, 'roundsH') : t(d, lang, `intro_h${step > 1 ? step - 1 : step}`)}</h2>
           {step === 0 && <>
             <p>{t(d, lang, 'intro_goal')}</p>
-            <p>{local(lang, 'roundsNote', { rounds: d.settings.rounds ?? 1 })}</p>
             <fieldset className="levels">
               <legend>{t(d, lang, 'level')}</legend>
               {d.levels.map((l) => (
@@ -73,11 +72,13 @@ export default function Intro({ d, open, onClose }: { d: GameData; open: boolean
             </fieldset>
             <p><strong>{t(d, lang, 'challenge', { budget: money(lang, budget(d)) })}</strong></p>
           </>}
-          {step === 1 && <>
-            {pn && sn && <p><strong>{t(d, lang, 'intro_visitor', { persona: pn, situation: sn })}</strong></p>}
-            <p>{t(d, lang, 'intro_all_visitors')}: {d.personas.map((p) => (lang === 'fi' && p.nameFi) || p.name).join('; ')}</p>
+          {step === 1 && ['rounds1', 'rounds2', 'rounds3'].map((k) => <p key={k}>{local(lang, k as 'rounds1', { rounds: d.settings.rounds ?? 1 })}</p>)}
+          {step === 2 && <>
+            <p>{local(lang, 'rcvLead')}</p>
+            {vp && <ul>{visitorTraits(lang, vp, vs).map((x) => <li key={x}>{x}</li>)}</ul>}
+            <p>{local(lang, 'rcvClose')}</p>
           </>}
-          {step >= 2 && step < last && <p>{t(d, lang, `intro_${step - 1}`)}</p>}
+          {step >= 3 && step < last && <p>{t(d, lang, `intro_${step - 2}`)}</p>}
           {step === last && <>
             <p>{t(d, lang, 'intro_launch', { button: t(d, lang, 'open_museum'), persona: pn ?? '' })}</p>
             <p className="note">{t(d, lang, 'model_disclaimer')}</p>

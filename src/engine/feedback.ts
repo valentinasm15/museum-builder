@@ -1,4 +1,4 @@
-import type { GameData, Persona } from '../data/load'
+import type { GameData, Persona, Situation } from '../data/load'
 import { budget, itemName, money, needsText, t, targetName, visitCtx, visitNames, type Lang, type Visit } from '../store'
 import { bundles, candidates, marginalContributions, type moneyEfficiency } from './benchmark'
 import { Plan, score, usable, type Placement, type VisitContext } from './score'
@@ -56,7 +56,12 @@ const LOCAL = {
   launchInactive: { en: 'Placed but not working yet:', fi: 'Sijoitettu, mutta ei vielä toimi:' },
   launchWaiting: { en: 'Placed but unused by anything yet:', fi: 'Sijoitettu, mutta mikään ei käytä vielä:' },
   launchBack: { en: 'Keep planning', fi: 'Jatka suunnittelua' },
-  roundsNote: { en: 'The game has {rounds} rounds, each with a different visitor. Your plan and budget carry over.', fi: 'Pelissä on {rounds} kierrosta, kullakin eri kävijä. Suunnitelmasi ja budjettisi säilyvät.' },
+  rcvLead: { en: 'The exhibition receives a visitor that:', fi: 'Näyttelyyn saapuu kävijä, joka:' },
+  rcvClose: { en: 'Plan with that in mind. When you launch the exhibition you will also see how the same layout works for everyone else.', fi: 'Suunnittele tämä kävijä mielessäsi. Kun avaat näyttelyn, näet myös, miten sama asettelu toimii kaikille muille.' },
+  roundsH: { en: 'Two rounds', fi: 'Kaksi kierrosta' },
+  rounds1: { en: 'The game has {rounds} rounds. Each round brings a different type of visitor.', fi: 'Pelissä on {rounds} kierrosta. Jokaisella kierroksella on eri kävijätyyppi.' },
+  rounds2: { en: 'In round 1, you plan for the first visitor type and get feedback.', fi: 'Kierroksella 1 suunnittelet ensimmäiselle kävijätyypille ja saat palautetta.' },
+  rounds3: { en: 'In round 2, you get the second visitor type. Your budget and accessibility items stay the same as in round 1. You can still add items, or remove items to get their cost back. The goal is to help both visitors.', fi: 'Kierroksella 2 saat toisen kävijätyypin. Budjettisi ja saavutettavuuskohteesi pysyvät samoina kuin kierroksella 1. Voit silti lisätä kohteita tai poistaa niitä saadaksesi niiden hinnan takaisin. Tavoitteena on auttaa molempia kävijöitä.' },
   keepPlan: { en: 'Your plan and budget are kept. You may remove or add items before the next visitor.', fi: 'Suunnitelmasi ja budjettisi säilyvät. Voit poistaa tai lisätä kohteita ennen seuraavaa kävijää.' },
   nextNone: { en: 'Nothing you can still afford adds access. Consider removing something that does not pay off.', fi: 'Mikään jäljellä olevalla rahalla ostettava ei lisää saavutettavuutta. Harkitse heikon ostoksen poistamista.' },
   left: { en: 'left', fi: 'jäljellä' },
@@ -64,6 +69,27 @@ const LOCAL = {
   idleRoute: { en: '{item} ({cost}, {where}) leads nowhere yet: the route is not connected to a room.', fi: '{item} ({cost}, {where}) ei johda vielä minnekään: reitti ei ulotu huoneeseen.' },
   idleDup: { en: '{item} ({cost}) adds nothing now: something else already does the same job.', fi: '{item} ({cost}) ei lisää nyt mitään: jokin muu hoitaa jo saman tehtävän.' },
   roundOf: { en: 'Round {n} of {total}', fi: 'Kierros {n}/{total}' },
+}
+// Visitor card bullets: [said when true, said when false]; null = say nothing.
+type Tr = { en: [string | null, string | null]; fi: [string | null, string | null] }
+const PTRAITS: Record<string, Tr> = {
+  usesSmartphone: { en: ['Uses a smartphone', null], fi: ['Käyttää älypuhelinta', null] },
+  comfortableWithTouch: { en: ['Is comfortable exploring by touch', null], fi: ['Tutkii mielellään tuntemalla', null] },
+  needsMagnification: { en: ['Needs text and images magnified', null], fi: ['Tarvitsee tekstit ja kuvat suurennettuina', null] },
+  glareSensitive: { en: ['Is sensitive to glare', null], fi: ['On häikäisyherkkä', null] },
+  needsContinuousRoute: { en: ['Needs a continuous guiding route to find the way', null], fi: ['Tarvitsee yhtenäisen opaslinjan reitin löytämiseen', null] },
+}
+const STRAITS: Record<string, Tr> = {
+  hasMuseumDevice: { en: ['Has a museum audio guide today', 'Has no museum audio guide today'], fi: ['Käyttää museon audio-opasta tänään', 'Ei museon audio-opasta tänään'] },
+  phoneWorks: { en: [null, 'Phone battery is dead'], fi: [null, 'Puhelimen akku on tyhjä'] },
+  staffAvailable: { en: ['Staff are available', 'Staff are not available (outside staffed hours)'], fi: ['Henkilökuntaa on paikalla', 'Henkilökuntaa ei ole paikalla (henkilökunnan aukioloajan ulkopuolella)'] },
+}
+export function visitorTraits(lang: Lang, p: Persona, s?: Situation): string[] {
+  const pick = (m: Record<string, Tr>, o: Record<string, unknown>) =>
+    Object.keys(m).map((k) => m[k][lang][o[k] ? 0 : 1]).filter((x): x is string => !!x)
+  const braille = p.attrs.residualVision && !p.attrs.readsBraille ? [lang === 'fi' ? 'Ei lue pistekirjoitusta' : 'Does not read braille'] : [] // blind titles already say it
+  const title = (lang === 'fi' && p.nameFi) || p.name
+  return [title.replace(/\s*\([^)]*\)\s*$/, ''), ...braille, ...pick(PTRAITS, p.attrs), ...(s ? pick(STRAITS, s as unknown as Record<string, unknown>) : [])]
 }
 export const local = (lang: Lang, k: keyof typeof LOCAL, vars: Record<string, string | number> = {}) =>
   LOCAL[k][lang].replace(/\{(\w+)\}/g, (m, v) => (v in vars ? String(vars[v]) : m))

@@ -29,10 +29,11 @@ export default function Debrief({ d, onRestart }: { d: GameData; onRestart: () =
   const total = d.settings.rounds ?? 1
   return (
     <dialog ref={ref} className="intro visit debrief" aria-labelledby="deb-h" onClose={closeVisit}>
+      <button type="button" className="xbtn" aria-label={close} onClick={() => ref.current?.close()}><span aria-hidden="true">✕</span></button>
+      <div className="deb-scroll">
       <header className="deb-top">
         <h2 id="deb-h">{t(d, lang, 'debrief')} · {L('roundOf', { n: round, total })}</h2>
-        <p className="verdict"><span className={`band ${x.band}`}>{b(x.band)}</span> {L('verdict', { n: x.verdict.works, total: x.verdict.total })}</p>
-        {x.verdict.gap && <p>{x.verdict.gap}</p>}
+        <p className="verdict">{x.focal.persona}: <span className={`band ${x.focal.band}`}>{b(x.focal.band)}</span></p>
         <p>{L('spentOf', { spent: money(lang, x.spent), budget: money(lang, x.budget) })}</p>
         <nav aria-label={t(d, lang, 'debrief')}><ul className="deb-nav">
           {([['a', 'navA'], ['b', 'navB'], ['c', 'navC'], ['d', 'navD']] as const).map(([id, k]) => <li key={id}><a href={`#deb-${id}`}>{L(k)}</a></li>)}
@@ -52,6 +53,8 @@ export default function Debrief({ d, onRestart }: { d: GameData; onRestart: () =
 
       <section aria-labelledby="deb-b-h" id="deb-b">
         <h3 id="deb-b-h">{L('titleB')}</h3>
+        <p className="verdict"><span className={`band ${x.band}`}>{b(x.band)}</span> {L('verdict', { n: x.verdict.works, total: x.verdict.total })}</p>
+        {x.verdict.gap && <p>{x.verdict.gap}</p>}
         <table className="who">
           <thead><tr><th scope="col">{L('colType')}</th><th scope="col">{L('colShare')}</th><th scope="col">{L('colResult')}</th><th scope="col">{L('colRooms')}</th></tr></thead>
           <tbody>{x.others.map((p) => (
@@ -102,6 +105,7 @@ export default function Debrief({ d, onRestart }: { d: GameData; onRestart: () =
         <button type="button" onClick={() => ref.current?.close()}>{close}</button>
         {more ? <button type="button" ref={nextBtn} onClick={nxt}>{t(d, lang, 'next_round')}</button>
           : <button type="button" ref={nextBtn} onClick={() => { restart(); ref.current?.close(); onRestart() }}>{L('playAgain')}</button>}
+      </div>
       </div>
     </dialog>
   )
