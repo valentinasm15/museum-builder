@@ -17,8 +17,6 @@ const focusId = (id: string) => setTimeout(() => document.getElementById(id)?.fo
 
 function Targets({ d, item }: { d: GameData; item: Item }) {
   const { lang, placements, place, remove, select } = useGame()
-  const ref = useRef<HTMLFieldSetElement>(null)
-  useEffect(() => { ref.current?.querySelector<HTMLButtonElement>('button:not([aria-disabled="true"])')?.focus() }, [])
   const cancel = () => { select(null); focusId(`sel-${item.id}`) }
   const list = targetsFor(d, item)
   const afterPlace = (at: string) => { // venue items are one-shot; zone/path items stay selected, so move to the next free target
@@ -31,7 +29,7 @@ function Targets({ d, item }: { d: GameData; item: Item }) {
     focusId('tgt-cancel')
   }
   return (
-    <fieldset ref={ref} className="targets" onKeyDown={(e) => e.key === 'Escape' && cancel()}>
+    <fieldset className="targets" onKeyDown={(e) => e.key === 'Escape' && cancel()}>
       <legend>{t(d, lang, 'targets')}</legend>
       {list.map((at) => {
         const mine = isPlaced(placements, item.id, at) // placed by the player: pressing it again removes it
@@ -56,14 +54,16 @@ function Detail({ d, item }: { d: GameData; item: Item }) {
   const lang = useGame((s) => s.lang)
   const key = `ch_${channelKey(item)}`
   const en = enables(d, item.id)
+  const head = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { head.current?.focus() }, []) // focus the title, not the first place button: the description is read first, Tab then reaches the places
   return (
     <div className="detail">
-      <h3>{itemName(lang, item)} · {money(lang, item.costEur)}</h3>
+      <h3 ref={head} tabIndex={-1}>{itemName(lang, item)} · {money(lang, item.costEur)}</h3>
+      {item.benefit && <p><b>{t(d, lang, 'source')}:</b> {(lang === 'fi' && item.benefitFi) || item.benefit}</p>}
       {d.texts[key] && <p className="tag">+ {t(d, lang, key)}</p>}
       <p><b>{t(d, lang, 'helps')}:</b> {helpsText(d, lang, item)}</p>
       <p><b>{t(d, lang, 'requires')}:</b> {needsText(d, lang, item.requires)}</p>
       {en.length > 0 && <p><b>{t(d, lang, 'enables')}:</b> {en.map((i) => itemName(lang, i)).join(', ')}</p>}
-      {item.benefit && <p><b>{t(d, lang, 'source')}:</b> {(lang === 'fi' && item.benefitFi) || item.benefit}</p>}
       <Targets d={d} item={item} />
     </div>
   )

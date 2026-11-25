@@ -47,7 +47,7 @@ export default function ItemInfo({ d }: { d: GameData }) {
 
 /** Room summary: select a room on the map or in the summary tab and its description opens on the map, like the item card. */
 export function ZoneInfo({ d }: { d: GameData }) {
-  const { lang, focus, setFocus, selected, phase, inspect } = useGame()
+  const { lang, focus, setFocus, phase, inspect } = useGame()
   const z = d.zones.find((x) => x.id === focus)
   const about = z && ((lang === 'fi' && z.aboutFi) || z.about)
   const how = z && ((lang === 'fi' && z.interactionFi) || z.interaction) // optional Zones columns
@@ -57,7 +57,7 @@ export function ZoneInfo({ d }: { d: GameData }) {
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
   }, [z, setFocus])
-  if (!z || !about || selected || inspect || phase !== 'planning') return null // not while placing an item, reading an item card, or in the walkthrough/debrief (they show it themselves)
+  if (!z || !about || inspect || phase !== 'planning') return null // not while reading an item card or in the walkthrough/debrief; stays available while an item is selected so rooms can be read at any time
   const close = lang === 'fi' ? 'Sulje' : 'Close'
   const name = (lang === 'fi' && z.nameFi) || z.nameEn
   return (
